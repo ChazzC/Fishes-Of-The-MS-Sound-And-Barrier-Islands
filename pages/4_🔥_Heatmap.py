@@ -3,6 +3,7 @@ import leafmap.foliumap as leafmap
 import geopandas as gpd
 import folium
 from folium.plugins import HeatMap
+from shapely.geometry import Point
 
 st.set_page_config(layout="wide")
 
@@ -124,40 +125,60 @@ folium.TileLayer(
 # FISH OBSERVATION DENSITY HEATMAP
 # ---------------------------------------------------------
 
+# Make a copy of the fish records
+fish_heatmap = fish_gdf.copy()
+
+# Make sure we have valid geometries
+fish_heatmap = fish_heatmap[
+    fish_heatmap.geometry.notna()
+].copy()
+
+# Make sure geometries are in WGS84
+if fish_heatmap.crs is not None:
+    fish_heatmap = fish_heatmap.to_crs("EPSG:4326")
+
+# Create the heatmap coordinate list
 heatmap_points = []
 
-for geometry in fish_gdf.geometry:
+for geom in fish_heatmap.geometry:
 
-    if geometry is not None and geometry.geom_type == "Point":
+    try:
+        # Use the centroid to obtain a guaranteed X/Y location.
+        # For Point geometries, the centroid is the point itself.
+        point = geom.centroid
+
         heatmap_points.append([
-            geometry.y,   # latitude
-            geometry.x,   # longitude
-            1             # one observation = one unit of density
+            float(point.y),   # latitude
+            float(point.x),   # longitude
+            1.0               # one fish observation
         ])
 
+    except Exception:
+        continue
 
-# Make sure we actually have points
-st.write(f"Fish observations used for heatmap: {len(heatmap_points):,}")
 
-
-m.add_heatmap(
-    heatmap_points,
-    latitude="latitude",
-    longitude="longitude",
-    value="value",
-    name="Fish Observation Density",
-    radius=30,
-    blur=25,
-    min_opacity=0.35,
-    max_zoom=12,
-    gradient={
-        0.20: "blue",
-        0.40: "cyan",
-        0.60: "lime",
-        0.80: "yellow",
-        1.00: "red",
-    },
+st.write(
+    f"Fish observations used for heatmap: {len(heatmap_points):,}"
 )
+
+
+# Add the heatmap
+if len(heatmap_points) > 0:
+
+    m.add_heatmap(
+        heatmap_points,
+        name="Fish Observation Density",
+        radius=30,
+        blur=25,
+        min_opacity=0.35,
+        max_zoom=12,
+    )
+
+else:
+
+    st.warning(
+        "No valid coordinates could be extracted from the fish records."
+    )
 
 
 # ---------------------------------------------------------
