@@ -54,15 +54,14 @@ def app():
     height = 600
 
     with row1_col2:
-
         backend = st.selectbox(
-            "Select a plotting backend", ["folium", "kepler.gl", "pydeck"], index=2
-        )
+    "Select a plotting backend", ["folium", "pydeck"], index=1
+)
+        
 
         if backend == "folium":
             import leafmap.foliumap as leafmap
-        elif backend == "kepler.gl":
-            import leafmap.kepler as leafmap
+        
         elif backend == "pydeck":
             import leafmap.deck as leafmap
 
