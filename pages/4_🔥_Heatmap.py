@@ -1,65 +1,61 @@
-import json
-import html
-import re
-import requests
-
 import streamlit as st
 import leafmap.foliumap as leafmap
 import geopandas as gpd
 import folium
+from streamlit_folium import st_folium
+import requests
+import json
+import ast
 
 
-# ============================================================
-# PAGE SETUP
-# ============================================================
+st.set_page_config(layout="wide")
 
-st.set_page_config(
-    page_title="Fish Records Heatmap",
-    page_icon="🔥",
-    layout="wide",
-)
-
-st.title("🔥 Fish Records & Environmental Heatmap")
-
-st.markdown(
-    """
-    Click a hexagon to explore environmental conditions and the
-    fish species recorded within that hexagon.
-    """
-)
+st.title("Fish Records Heatmap")
 
 
-# ============================================================
-# GITHUB DATA URLS
-# ============================================================
-
-BASE_RAW = (
-    "https://raw.githubusercontent.com/"
-    "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/main"
-)
+# ---------------------------------------------------------------------
+# URLs
+# ---------------------------------------------------------------------
 
 dem_filepath = (
-    f"{BASE_RAW}/data/"
-    "Elevation_and_Bathymertry_Study_Area.tiff.tif"
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
 )
 
-fish_records_url = f"{BASE_RAW}/data/Fish_Records.geojson"
-
-hex_bins_url = f"{BASE_RAW}/data/Hex_Bins.geojson"
-
-study_area_url = f"{BASE_RAW}/data/StudyArea.geojson"
-
-species_metadata_url = (
-    f"{BASE_RAW}/Photos_and_Metadata_v3.JSON"
+fish_records_url = (
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/Fish_Records.geojson"
 )
 
-# Photos are stored in this GitHub folder.
-photos_base_url = f"{BASE_RAW}/photos/"
+hex_bins_url = (
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/Hex_Bins.geojson"
+)
+
+study_area_url = (
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/StudyArea.geojson"
+)
+
+species_json_url = (
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "Photos_and_Metadata_v3.JSON"
+)
+
+github_raw_base = (
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+)
 
 
-# ============================================================
-# USER-FRIENDLY FIELD ALIASES
-# ============================================================
+# ---------------------------------------------------------------------
+# Hexagon field labels
+# ---------------------------------------------------------------------
 
 FIELD_ALIASES = {
     "max_elevation": "Maximum Elevation / Depth",
@@ -73,26 +69,11 @@ FIELD_ALIASES = {
 }
 
 
-# Fields that should never appear in the visitor-facing popup.
-HIDDEN_FIELDS = {
-    "fid",
-    "id",
-    "left",
-    "top",
-    "right",
-    "bottom",
-    "row_index",
-    "col_index",
-    "CSU_ID",
-    "Species_Array",
-}
+# ---------------------------------------------------------------------
+# Load data
+# ---------------------------------------------------------------------
 
-
-# ============================================================
-# LOAD VECTOR DATA
-# ============================================================
-
-@st.cache_data(ttl=3600)
+@st.cache_data
 def load_vector_data(url):
     gdf = gpd.read_file(url)
 
@@ -102,694 +83,135 @@ def load_vector_data(url):
     return gdf
 
 
-@st.cache_data(ttl=3600)
+@st.cache_data
 def load_species_metadata(url):
     response = requests.get(url, timeout=30)
     response.raise_for_status()
-    return response.json()
 
+    data = response.json()
 
-# ------------------------------------------------------------
-# Load GIS data
-# ------------------------------------------------------------
+    # Photos_and_Metadata_v3.JSON contains a "species" dictionary.
+    return data.get("species", data)
+
 
 fish_gdf = load_vector_data(fish_records_url)
 hex_gdf = load_vector_data(hex_bins_url)
 study_area_gdf = load_vector_data(study_area_url)
+species_metadata = load_species_metadata(species_json_url)
 
 
-# ------------------------------------------------------------
-# Load species/photo metadata
-# ------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------
 
-try:
-    species_metadata = load_species_metadata(species_metadata_url)
-
-except Exception as e:
-    species_metadata = None
-
-    st.warning(
-        "The species photo metadata could not be loaded from GitHub. "
-        "The environmental map will still work."
-    )
-
-    st.caption(str(e))
-
-
-# ============================================================
-# SPECIES METADATA HELPERS
-# ============================================================
-
-def normalize_species_name(value):
+def parse_species_array(value):
     """
-    Normalize species names so that small differences in
-    capitalization or whitespace don't prevent matching.
+    Convert Species_Array into a clean list of unique scientific names.
+
+    Handles:
+      - Python lists
+      - strings representing Python lists
+      - comma-separated strings
+      - empty/null values
     """
+
     if value is None:
-        return ""
-
-    value = str(value).strip()
-
-    value = re.sub(r"\s+", " ", value)
-
-    return value.casefold()
-
-
-def find_species_records(data):
-    """
-    Convert the various possible JSON layouts into a simple
-    list of dictionaries.
-
-    This intentionally avoids assuming that the top-level JSON
-    object has only one particular structure.
-    """
-
-    if data is None:
         return []
 
-    if isinstance(data, list):
-        return [
-            item for item in data
-            if isinstance(item, dict)
-        ]
+    if isinstance(value, list):
+        values = value
 
-    if isinstance(data, dict):
+    else:
+        text = str(value).strip()
 
-        # Common structure:
-        # {"species": [...]}
-        for key in [
-            "species",
-            "Species",
-            "records",
-            "Records",
-            "data",
-            "Data",
-            "photos",
-            "Photos",
-        ]:
+        if not text or text.lower() in {
+            "none",
+            "null",
+            "nan",
+            "[]",
+        }:
+            return []
 
-            value = data.get(key)
+        try:
+            parsed = ast.literal_eval(text)
 
-            if isinstance(value, list):
+            if isinstance(parsed, (list, tuple, set)):
+                values = parsed
+            else:
+                values = [parsed]
 
-                return [
-                    item for item in value
-                    if isinstance(item, dict)
-                ]
+        except (ValueError, SyntaxError):
+            values = [
+                part.strip()
+                for part in text.strip("[]").split(",")
+            ]
 
-        # Another common structure is:
-        # {"Aetobatus narinari": {...}, ...}
-        records = []
+    cleaned = []
+    seen = set()
 
-        for key, value in data.items():
+    for value in values:
 
-            if isinstance(value, dict):
+        species = str(value).strip().strip("'\"")
 
-                record = value.copy()
+        if species:
+            key = species.casefold()
 
-                if not any(
-                    k.lower() in {
-                        "species",
-                        "scientific_name",
-                        "scientific name",
-                        "scientificname",
-                    }
-                    for k in record.keys()
-                ):
-                    record["species"] = key
+            if key not in seen:
+                cleaned.append(species)
+                seen.add(key)
 
-                records.append(record)
-
-        return records
-
-    return []
+    return cleaned
 
 
-def get_record_value(record, possible_keys):
+def species_photo_url(record):
     """
-    Find the first matching value from a list of possible
-    metadata field names.
+    Convert the photo path in the species JSON into the
+    corresponding raw GitHub URL.
     """
 
-    if not isinstance(record, dict):
-        return None
+    photo = record.get("photo")
 
-    lowered = {
-        str(k).casefold(): v
-        for k, v in record.items()
-    }
+    if photo:
 
-    for key in possible_keys:
+        photo = str(photo).lstrip("/")
 
-        value = lowered.get(key.casefold())
+        if photo.startswith("http://") or photo.startswith("https://"):
+            return photo
 
-        if value not in [None, ""]:
-            return value
+        return github_raw_base + photo
+
+    return record.get("source_image_url")
+
+
+def find_species_metadata(species_name):
+    """
+    Find species metadata case-insensitively.
+    """
+
+    wanted = species_name.casefold()
+
+    for name, record in species_metadata.items():
+
+        if str(name).casefold() == wanted:
+            return record
 
     return None
 
 
-def build_species_lookup(data):
+# ---------------------------------------------------------------------
+# Session state
+# ---------------------------------------------------------------------
 
-    records = find_species_records(data)
+if "selected_hex" not in st.session_state:
+    st.session_state.selected_hex = None
 
-    lookup = {}
+if "selected_species" not in st.session_state:
+    st.session_state.selected_species = None
 
-    for record in records:
 
-        species = get_record_value(
-            record,
-            [
-                "scientific_name",
-                "scientific name",
-                "scientificname",
-                "species",
-                "Species",
-                "taxon_name",
-                "taxon",
-            ],
-        )
-
-        if not species:
-            continue
-
-        species = str(species).strip()
-
-        normalized = normalize_species_name(species)
-
-        photo_filename = get_record_value(
-            record,
-            [
-                "photo_filename",
-                "photo filename",
-                "filename",
-                "file_name",
-                "image_filename",
-                "image filename",
-                "photo",
-                "image",
-            ],
-        )
-
-        author = get_record_value(
-            record,
-            [
-                "author",
-                "owner",
-                "photographer",
-                "creator",
-                "username",
-                "inat_author",
-            ],
-        )
-
-        license_name = get_record_value(
-            record,
-            [
-                "license",
-                "license_code",
-                "license name",
-            ],
-        )
-
-        attribution = get_record_value(
-            record,
-            [
-                "attribution",
-                "credit",
-                "photo_attribution",
-            ],
-        )
-
-        source_url = get_record_value(
-            record,
-            [
-                "source_url",
-                "source url",
-                "inat_url",
-                "inaturalist_url",
-                "url",
-                "source",
-            ],
-        )
-
-        image_url = get_record_value(
-            record,
-            [
-                "image_url",
-                "image url",
-                "source_image_url",
-                "source image url",
-            ],
-        )
-
-        # If the metadata contains only a filename,
-        # build the GitHub photo URL.
-        if not image_url and photo_filename:
-
-            filename = str(photo_filename).strip()
-
-            image_url = (
-                photos_base_url
-                + requests.utils.quote(filename)
-            )
-
-        lookup[normalized] = {
-            "species": species,
-            "photo_filename": photo_filename,
-            "image_url": image_url,
-            "author": author,
-            "license": license_name,
-            "attribution": attribution,
-            "source_url": source_url,
-        }
-
-    return lookup
-
-
-species_lookup = build_species_lookup(species_metadata)
-
-
-# ============================================================
-# SPECIES ARRAY HANDLING
-# ============================================================
-
-def parse_species_array(value):
-
-    if value is None:
-        return []
-
-    # Already a Python list.
-    if isinstance(value, list):
-
-        result = []
-
-        for item in value:
-
-            if item is None:
-                continue
-
-            item = str(item).strip()
-
-            if item:
-                result.append(item)
-
-        return sorted(set(result), key=str.casefold)
-
-    # JSON string representation of a list.
-    if isinstance(value, str):
-
-        value = value.strip()
-
-        if not value:
-            return []
-
-        try:
-
-            parsed = json.loads(value)
-
-            if isinstance(parsed, list):
-                return parse_species_array(parsed)
-
-        except Exception:
-            pass
-
-        # Fallback for comma-separated values.
-        parts = [
-            x.strip()
-            for x in value.split(",")
-        ]
-
-        return sorted(
-            set(x for x in parts if x),
-            key=str.casefold,
-        )
-
-    return []
-
-
-# ============================================================
-# HTML HELPERS
-# ============================================================
-
-def safe_text(value):
-
-    if value is None:
-        return ""
-
-    if isinstance(value, float):
-
-        if value != value:
-            return ""
-
-    return html.escape(str(value))
-
-
-def create_species_photo_html(species):
-
-    normalized = normalize_species_name(species)
-
-    record = species_lookup.get(normalized)
-
-    species_display = safe_text(species)
-
-    if record is None:
-
-        return f"""
-        <div class="species-photo-panel">
-            <h4>{species_display}</h4>
-            <p><em>No photo metadata found.</em></p>
-        </div>
-        """
-
-    image_url = record.get("image_url")
-
-    author = safe_text(record.get("author"))
-    license_name = safe_text(record.get("license"))
-    attribution = safe_text(record.get("attribution"))
-    source_url = record.get("source_url")
-
-    if image_url:
-
-        image_html = f"""
-        <img
-            src="{html.escape(str(image_url), quote=True)}"
-            style="
-                width:100%;
-                max-height:260px;
-                object-fit:contain;
-                border-radius:6px;
-                margin-top:8px;
-            "
-        >
-        """
-
-    else:
-
-        image_html = """
-        <p><em>No photograph available.</em></p>
-        """
-
-    source_html = ""
-
-    if source_url:
-
-        source_html = f"""
-        <p style="margin-top:6px;">
-            <a
-                href="{html.escape(str(source_url), quote=True)}"
-                target="_blank"
-            >
-                View original iNaturalist record
-            </a>
-        </p>
-        """
-
-    credit_parts = []
-
-    if attribution:
-        credit_parts.append(attribution)
-
-    elif author:
-        credit_parts.append(f"Photo: {author}")
-
-    if license_name:
-        credit_parts.append(f"License: {license_name}")
-
-    credit_html = ""
-
-    if credit_parts:
-
-        credit_html = f"""
-        <div
-            style="
-                font-size:11px;
-                color:#555;
-                margin-top:5px;
-            "
-        >
-            {"<br>".join(credit_parts)}
-        </div>
-        """
-
-    return f"""
-    <div class="species-photo-panel">
-
-        <h4
-            style="
-                margin-bottom:5px;
-                font-style:italic;
-            "
-        >
-            {species_display}
-        </h4>
-
-        {image_html}
-
-        {credit_html}
-
-        {source_html}
-
-    </div>
-    """
-
-
-# ============================================================
-# HEX POPUP
-# ============================================================
-
-def create_hex_popup(row, hex_index):
-
-    species = parse_species_array(
-        row.get("Species_Array")
-    )
-
-    # --------------------------------------------------------
-    # Environmental information
-    # --------------------------------------------------------
-
-    environmental_rows = []
-
-    for field, label in FIELD_ALIASES.items():
-
-        if field not in row:
-            continue
-
-        value = row.get(field)
-
-        if value is None:
-            continue
-
-        if isinstance(value, float) and value != value:
-            continue
-
-        value = str(value).strip()
-
-        if not value:
-            continue
-
-        environmental_rows.append(
-            f"""
-            <tr>
-                <td
-                    style="
-                        font-weight:600;
-                        padding:3px 8px 3px 0;
-                        vertical-align:top;
-                    "
-                >
-                    {html.escape(label)}
-                </td>
-
-                <td
-                    style="
-                        padding:3px 0;
-                        vertical-align:top;
-                    "
-                >
-                    {html.escape(value)}
-                </td>
-            </tr>
-            """
-        )
-
-    environmental_html = "".join(environmental_rows)
-
-    if not environmental_html:
-
-        environmental_html = """
-        <tr>
-            <td colspan="2">
-                No environmental information available.
-            </td>
-        </tr>
-        """
-
-    # --------------------------------------------------------
-    # Species list
-    # --------------------------------------------------------
-
-    if species:
-
-        species_buttons = []
-
-        for i, species_name in enumerate(species):
-
-            species_display = safe_text(species_name)
-
-            photo_html = create_species_photo_html(
-                species_name
-            )
-
-            # Escape the HTML so it can safely be embedded
-            # inside the JavaScript string.
-            photo_html_js = json.dumps(photo_html)
-
-            button = f"""
-            <button
-                type="button"
-                onclick='showSpeciesPhoto(
-                    "hex_{hex_index}",
-                    {json.dumps(species_name)},
-                    {photo_html_js}
-                )'
-                style="
-                    display:block;
-                    width:100%;
-                    text-align:left;
-                    border:none;
-                    background:none;
-                    padding:4px 0;
-                    color:#1464a0;
-                    cursor:pointer;
-                    font-style:italic;
-                    font-size:13px;
-                "
-            >
-                {species_display}
-            </button>
-            """
-
-            species_buttons.append(button)
-
-        species_html = "".join(species_buttons)
-
-    else:
-
-        species_html = """
-        <p>
-            <em>No fish species recorded in this hexagon.</em>
-        </p>
-        """
-
-    # --------------------------------------------------------
-    # Final popup
-    # --------------------------------------------------------
-
-    popup_html = f"""
-    <div
-        id="popup_hex_{hex_index}"
-        style="
-            width:340px;
-            max-height:520px;
-            overflow-y:auto;
-            font-family:Arial,sans-serif;
-            font-size:13px;
-        "
-    >
-
-        <h3
-            style="
-                margin-top:0;
-                margin-bottom:10px;
-                border-bottom:1px solid #ccc;
-                padding-bottom:6px;
-            "
-        >
-            Hexagon {safe_text(row.get("id", hex_index))}
-        </h3>
-
-
-        <h4
-            style="
-                margin-bottom:5px;
-            "
-        >
-            Environmental Information
-        </h4>
-
-        <table
-            style="
-                width:100%;
-                border-collapse:collapse;
-                margin-bottom:12px;
-            "
-        >
-            {environmental_html}
-        </table>
-
-
-        <h4
-            style="
-                margin-top:10px;
-                margin-bottom:5px;
-            "
-        >
-            Fish Species
-        </h4>
-
-        <div>
-            {species_html}
-        </div>
-
-
-        <div
-            id="species_photo_hex_{hex_index}"
-            style="
-                margin-top:12px;
-                padding-top:10px;
-                border-top:1px solid #ccc;
-            "
-        >
-            <p style="color:#777;">
-                Click a species above to view its photograph.
-            </p>
-        </div>
-
-    </div>
-    """
-
-    return popup_html
-
-
-# ============================================================
-# JAVASCRIPT FOR SPECIES PHOTOS
-# ============================================================
-
-species_photo_js = """
-<script>
-
-function showSpeciesPhoto(hexId, speciesName, photoHtml) {
-
-    var panel = document.getElementById(
-        "species_photo_" + hexId
-    );
-
-    if (!panel) {
-        return;
-    }
-
-    panel.innerHTML = photoHtml;
-
-}
-
-</script>
-"""
-
-
-# ============================================================
-# CREATE MAP
-# ============================================================
+# ---------------------------------------------------------------------
+# Create map
+# ---------------------------------------------------------------------
 
 m = leafmap.Map(
     center=[30.9, -88.3],
@@ -798,15 +220,14 @@ m = leafmap.Map(
 )
 
 
-# ============================================================
-# BASEMAPS
-# ============================================================
+# ---------------------------------------------------------------------
+# Basemaps
+# ---------------------------------------------------------------------
 
 folium.TileLayer(
     tiles=(
-        "https://server.arcgisonline.com/"
-        "ArcGIS/rest/services/World_Imagery/"
-        "MapServer/tile/{z}/{y}/{x}"
+        "https://server.arcgisonline.com/ArcGIS/rest/services/"
+        "World_Imagery/MapServer/tile/{z}/{y}/{x}"
     ),
     attr="Esri World Imagery",
     name="Satellite Imagery",
@@ -825,15 +246,18 @@ folium.TileLayer(
 ).add_to(m)
 
 
-# ============================================================
-# ELEVATION / BATHYMETRY RASTER
-# ============================================================
+# ---------------------------------------------------------------------
+# Elevation / bathymetry raster
+#
+# Direct TiTiler tiles are used because this successfully rendered
+# the terrain colors when add_cog_layer() did not.
+# ---------------------------------------------------------------------
 
 titiler_tiles = (
-    "https://titiler.opengeos.org/"
-    "cog/tiles/WebMercatorQuad/"
+    "https://titiler.opengeos.org/cog/tiles/WebMercatorQuad/"
     "{z}/{x}/{y}.png"
-    "?url=" + dem_filepath
+    "?url="
+    + dem_filepath
     + "&bidx=1"
     + "&rescale=-19.212,57.122"
     + "&colormap_name=terrain"
@@ -851,22 +275,13 @@ folium.TileLayer(
 ).add_to(m)
 
 
-# ============================================================
-# FISH OBSERVATION HEATMAP
-# ============================================================
+# ---------------------------------------------------------------------
+# Fish observation heatmap
+# ---------------------------------------------------------------------
 
-fish_heatmap = fish_gdf.copy()
-
-fish_heatmap = fish_heatmap[
-    fish_heatmap.geometry.notna()
+fish_heatmap = fish_gdf[
+    fish_gdf.geometry.notna()
 ].copy()
-
-
-if fish_heatmap.crs is not None:
-
-    fish_heatmap = fish_heatmap.to_crs(
-        "EPSG:4326"
-    )
 
 
 heatmap_points = []
@@ -882,12 +297,11 @@ for geom in fish_heatmap.geometry:
             [
                 float(point.y),
                 float(point.x),
-                1.0,
+                1.0,       # Every fish record has weight = 1
             ]
         )
 
     except Exception:
-
         continue
 
 
@@ -901,9 +315,9 @@ m.add_heatmap(
 )
 
 
-# ============================================================
-# INDIVIDUAL FISH RECORDS
-# ============================================================
+# ---------------------------------------------------------------------
+# Individual fish records
+# ---------------------------------------------------------------------
 
 fish_group = folium.FeatureGroup(
     name="Individual Fish Records",
@@ -911,7 +325,7 @@ fish_group = folium.FeatureGroup(
 )
 
 
-tooltip_fields = [
+fish_fields = [
     field
     for field in fish_gdf.columns
     if field != "geometry"
@@ -920,11 +334,10 @@ tooltip_fields = [
 
 folium.GeoJson(
     fish_gdf.to_json(),
-    name="Individual Fish Records",
 
     tooltip=folium.GeoJsonTooltip(
-        fields=tooltip_fields,
-        aliases=tooltip_fields,
+        fields=fish_fields,
+        aliases=fish_fields,
         localize=True,
         sticky=False,
     ),
@@ -935,15 +348,16 @@ folium.GeoJson(
         fill_opacity=0.8,
         opacity=0.8,
     ),
+
 ).add_to(fish_group)
 
 
 fish_group.add_to(m)
 
 
-# ============================================================
-# STUDY AREA
-# ============================================================
+# ---------------------------------------------------------------------
+# Study Area
+# ---------------------------------------------------------------------
 
 study_group = folium.FeatureGroup(
     name="Study Area",
@@ -953,8 +367,6 @@ study_group = folium.FeatureGroup(
 
 folium.GeoJson(
     study_area_gdf.to_json(),
-
-    name="Study Area",
 
     style_function=lambda feature: {
         "color": "white",
@@ -969,9 +381,31 @@ folium.GeoJson(
 study_group.add_to(m)
 
 
-# ============================================================
-# HEX BINS
-# ============================================================
+# ---------------------------------------------------------------------
+# Hex bins
+#
+# Important:
+# We preserve ALL hexagon properties in the GeoJSON. This allows
+# streamlit-folium to return the environmental fields and Species_Array
+# when a hexagon is clicked.
+# ---------------------------------------------------------------------
+
+hex_geojson = json.loads(
+    hex_gdf.to_json()
+)
+
+
+for feature in hex_geojson["features"]:
+
+    feature.setdefault(
+        "properties",
+        {}
+    )
+
+    # Identifies this as a selectable hexagon when it comes back
+    # through streamlit-folium.
+    feature["properties"]["_layer_type"] = "hex"
+
 
 hex_group = folium.FeatureGroup(
     name="Hex Bins",
@@ -979,84 +413,266 @@ hex_group = folium.FeatureGroup(
 )
 
 
-for hex_index, row in hex_gdf.iterrows():
+folium.GeoJson(
 
-    geometry = row.geometry
+    hex_geojson,
 
-    if geometry is None:
-        continue
+    style_function=lambda feature: {
+        "color": "yellow",
+        "weight": 1,
+        "fillColor": "yellow",
+        "fillOpacity": 0.0,
+    },
 
-    # --------------------------------------------------------
-    # Make a single-feature GeoJSON object.
-    # --------------------------------------------------------
+    highlight_function=lambda feature: {
+        "color": "white",
+        "weight": 3,
+        "fillColor": "yellow",
+        "fillOpacity": 0.15,
+    },
 
-    feature = {
-        "type": "Feature",
-        "geometry": geometry.__geo_interface__,
-        "properties": {},
-    }
+    tooltip=folium.GeoJsonTooltip(
+        fields=["id"],
+        aliases=["Hexagon ID"],
+        sticky=False,
+    ),
 
-    popup_html = create_hex_popup(
-        row,
-        hex_index,
-    )
-
-    popup = folium.Popup(
-        popup_html,
-        max_width=380,
-    )
-
-    folium.GeoJson(
-        feature,
-
-        name=f"Hex {row.get('id', hex_index)}",
-
-        style_function=lambda feature: {
-            "color": "yellow",
-            "weight": 1,
-            "fillColor": "yellow",
-            "fillOpacity": 0.0,
-        },
-
-        highlight_function=lambda feature: {
-            "color": "white",
-            "weight": 3,
-            "fillColor": "yellow",
-            "fillOpacity": 0.15,
-        },
-
-        popup=popup,
-
-    ).add_to(hex_group)
+).add_to(hex_group)
 
 
 hex_group.add_to(m)
 
 
-# ============================================================
-# JAVASCRIPT
-# ============================================================
+# ---------------------------------------------------------------------
+# Layer control
+# ---------------------------------------------------------------------
 
-m.get_root().html.add_child(
-    folium.Element(species_photo_js)
-)
-
-
-# ============================================================
-# LAYER CONTROL
-# ============================================================
-
-folium.LayerControl(
+layer_control = folium.LayerControl(
     position="topright",
     collapsed=False,
-).add_to(m)
-
-
-# ============================================================
-# DISPLAY
-# ============================================================
-
-m.to_streamlit(
-    height=750,
-    add_layer_control=False,
 )
+
+layer_control.add_to(m)
+
+
+# ---------------------------------------------------------------------
+# Display interactive map
+# ---------------------------------------------------------------------
+#
+# st_folium is important here. Unlike m.to_streamlit(), it sends
+# information about clicked map features back to Streamlit.
+# ---------------------------------------------------------------------
+
+map_data = st_folium(
+    m,
+    height=750,
+    width=None,
+    returned_objects=[
+        "last_active_drawing",
+    ],
+    layer_control=layer_control,
+)
+
+
+# ---------------------------------------------------------------------
+# Detect selected hexagon
+# ---------------------------------------------------------------------
+
+active = None
+
+if map_data:
+    active = map_data.get(
+        "last_active_drawing"
+    )
+
+
+if (
+    active
+    and active.get("properties", {}).get("_layer_type")
+    == "hex"
+):
+
+    st.session_state.selected_hex = (
+        active["properties"]
+    )
+
+    # A new hexagon was selected, so clear the previously
+    # selected species photo.
+    st.session_state.selected_species = None
+
+
+selected_hex = st.session_state.selected_hex
+
+
+# ---------------------------------------------------------------------
+# Selected hexagon information
+# ---------------------------------------------------------------------
+
+if selected_hex:
+
+    species = parse_species_array(
+        selected_hex.get("Species_Array")
+    )
+
+    st.divider()
+
+    left, right = st.columns(
+        [1, 1.4]
+    )
+
+
+    # ---------------------------------------------------------------
+    # LEFT: Hexagon information + species list
+    # ---------------------------------------------------------------
+
+    with left:
+
+        st.subheader(
+            "Selected Hexagon"
+        )
+
+
+        for field, label in FIELD_ALIASES.items():
+
+            value = selected_hex.get(
+                field
+            )
+
+            if (
+                value is not None
+                and str(value).strip()
+                not in {
+                    "",
+                    "nan",
+                    "None",
+                }
+            ):
+
+                st.markdown(
+                    f"**{label}:** {value}"
+                )
+
+
+        # -----------------------------------------------------------
+        # Species count is displayed here.
+        #
+        # Example:
+        # Fish Species (12)
+        # -----------------------------------------------------------
+
+        st.subheader(
+            f"Fish Species ({len(species)})"
+        )
+
+
+        if species:
+
+            for sp in species:
+
+                if st.button(
+                    sp,
+                    key=f"species_{sp}",
+                    use_container_width=True,
+                ):
+
+                    st.session_state.selected_species = sp
+
+        else:
+
+            st.info(
+                "No fish species are listed "
+                "for this hexagon."
+            )
+
+
+    # ---------------------------------------------------------------
+    # RIGHT: Selected species photo
+    # ---------------------------------------------------------------
+
+    with right:
+
+        selected_species = (
+            st.session_state.selected_species
+        )
+
+
+        if selected_species:
+
+            record = find_species_metadata(
+                selected_species
+            )
+
+
+            st.subheader(
+                selected_species
+            )
+
+
+            if record:
+
+                image_url = species_photo_url(
+                    record
+                )
+
+
+                if image_url:
+
+                    st.image(
+                        image_url,
+                        use_container_width=True,
+                    )
+
+
+                if record.get("attribution"):
+
+                    st.caption(
+                        record["attribution"]
+                    )
+
+
+                if record.get("license"):
+
+                    st.write(
+                        f"**License:** "
+                        f"{record['license']}"
+                    )
+
+
+                if record.get("author"):
+
+                    st.write(
+                        f"**Photographer / Author:** "
+                        f"{record['author']}"
+                    )
+
+
+                if record.get("source_url"):
+
+                    st.markdown(
+                        "[View source on iNaturalist]"
+                        f"({record['source_url']})"
+                    )
+
+
+            else:
+
+                st.info(
+                    "No photo metadata was found "
+                    "for this species."
+                )
+
+
+        else:
+
+            st.info(
+                "Click a species name to view "
+                "its photo and attribution."
+            )
+
+
+else:
+
+    st.info(
+        "Click a hexagon to view its "
+        "environmental data and fish species."
+    )
