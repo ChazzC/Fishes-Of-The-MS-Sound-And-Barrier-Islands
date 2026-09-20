@@ -36,26 +36,28 @@ with st.expander("See source code"):
         )
 
         m = leafmap.Map(center=[31, -88], zoom=8)
-        # Blue → cyan → green → yellow → orange → brown
-        custom_colormap = json.dumps([
-            [[-19.212, -15], [8, 48, 107, 255]],
-            [[-15, -10],     [8, 81, 156, 255]],
-            [[-10, -5],      [33, 113, 181, 255]],
-            [[-5, 0],        [65, 182, 196, 255]],
-            [[0, 2],         [0, 166, 90, 255]],
-            [[2, 5],         [127, 207, 63, 255]],
-            [[5, 10],        [254, 224, 61, 255]],
-            [[10, 20],       [254, 146, 41, 255]],
-            [[20, 35],       [244, 109, 67, 255]],
-            [[35, 57.122],   [127, 59, 8, 255]],
-        ])
+        # Custom bathymetry/elevation color ramp
+          
+        custom_colormap = json.dumps({
+            "0":   "#08306B",
+            "14":  "#08519C",
+            "31":  "#2171B5",
+            "48":  "#41B6C4",
+            "64":  "#00A65A",
+            "71":  "#7FCF3F",
+            "81":  "#D9EF3D",
+            "98":  "#FEE08B",
+            "131": "#F46D43",
+            "181": "#D73027",
+            "255": "#7F3B08",
+        })  
 
         # Add the Cloud Optimized GeoTIFF
         m.add_cog_layer(
             dem_filepath,
             name="Elevation & Bathymetry",
             bands=[1],
-            # rescale="-19.212,57.122",
+            rescale="-19.212,57.122",
             colormap=custom_colormap,
         )          
 
