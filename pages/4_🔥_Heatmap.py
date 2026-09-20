@@ -1,8 +1,6 @@
-import requests
 import streamlit as st
 import leafmap.foliumap as leafmap
-import folium
-from folium.plugins import HeatMap
+import geopandas as gpd
 
 
 st.set_page_config(layout="wide")
@@ -40,17 +38,49 @@ study_area_url = (
 
 
 # =========================================================
+# LOAD VECTOR DATA
+# =========================================================
+
+@st.cache_data
+def load_vector_data(url):
+
+    gdf = gpd.read_file(url)
+
+    # Convert everything to WGS84 for Leaflet
+    if gdf.crs is not None:
+        gdf = gdf.to_crs("EPSG:4326")
+
+    return gdf
+
+
+fish_gdf = load_vector_data(fish_records_url)
+study_area_gdf = load_vector_data(study_area_url)
+hex_gdf = load_vector_data(hex_bins_url)
+
+
+# =========================================================
 # CREATE MAP
 # =========================================================
 
 m = leafmap.Map(
     center=[30.9, -88.3],
     zoom=8,
+    tiles=None,
 )
 
 
 # =========================================================
-# 1. ELEVATION & BATHYMETRY
+# BASEMAP
+# =========================================================
+
+m.add_basemap(
+    "Esri.WorldImagery",
+    show=True,
+)
+
+
+# =========================================================
+# ELEVATION & BATHYMETRY
 # =========================================================
 
 titiler_tiles = (
@@ -66,162 +96,99 @@ m.add_tile_layer(
     url=titiler_tiles,
     name="Elevation & Bathymetry",
     attribution="TiTiler",
-    shown=True,
+    overlay=True,
+    control=True,
+    shown=False,
     opacity=0.75,
 )
 
 
 # =========================================================
-# 2. LOAD FISH RECORDS
-# =========================================================
-
-response = requests.get(
-    fish_records_url,
-    timeout=60,
-)
-
-response.raise_for_status()
-
-fish_geojson = response.json()
-
-
-# =========================================================
-# 3. FISH OBSERVATION DENSITY
+# FISH OBSERVATION DENSITY
 # =========================================================
 
 heatmap_points = []
 
-for feature in fish_geojson["features"]:
+for geometry in fish_gdf.geometry:
 
-    geometry = feature.get("geometry")
+    if geometry is not None and geometry.geom_type == "Point":
 
-    if geometry and geometry.get("type") == "Point":
-
-        longitude, latitude = geometry["coordinates"][:2]
-
-        heatmap_points.append([
-            latitude,
-            longitude,
-            1,
-        ])
+        heatmap_points.append(
+            [
+                geometry.y,
+                geometry.x,
+                1,
+            ]
+        )
 
 
-fish_heatmap = folium.FeatureGroup(
-    name="Fish Observation Density",
-    show=True,
-)
-
-HeatMap(
+m.add_heatmap(
     heatmap_points,
+    name="Fish Observation Density",
     radius=18,
-    blur=20,
-    min_opacity=0.25,
-    max_zoom=12,
-).add_to(fish_heatmap)
-
-fish_heatmap.add_to(m)
-
-
-# =========================================================
-# 4. INDIVIDUAL FISH RECORDS
-# =========================================================
-
-fish_records_layer = folium.FeatureGroup(
-    name="Individual Fish Records",
-    show=False,
 )
 
-folium.GeoJson(
-    fish_geojson,
-    name="Individual Fish Records",
-    tooltip=folium.GeoJsonTooltip(
-        fields=["Scientific Name"],
-        aliases=["Species:"],
-        localize=True,
-        sticky=False,
-    ),
-).add_to(fish_records_layer)
 
-fish_records_layer.add_to(m)
+# =========================================================
+# INDIVIDUAL FISH RECORDS
+# =========================================================
+
+m.add_gdf(
+    fish_gdf,
+    layer_name="Individual Fish Records",
+    zoom_to_layer=False,
+    info_mode="on_hover",
+    opacity=0.8,
+    style={
+        "color": "#0066cc",
+        "fillColor": "#0066cc",
+        "radius": 4,
+    },
+)
 
 
 # =========================================================
-# 5. STUDY AREA
+# STUDY AREA
 # =========================================================
 
-try:
-
-    study_response = requests.get(
-        study_area_url,
-        timeout=60,
-    )
-
-    study_response.raise_for_status()
-
-    study_area_geojson = study_response.json()
-
-    study_area_layer = folium.FeatureGroup(
-        name="Study Area",
-        show=True,
-    )
-
-    folium.GeoJson(
-        study_area_geojson,
-        name="Study Area",
-        style_function=lambda feature: {
-            "color": "black",
-            "weight": 3,
-            "fillOpacity": 0,
-        },
-    ).add_to(study_area_layer)
-
-    study_area_layer.add_to(m)
-
-except Exception as e:
-
-    st.warning(
-        f"Study Area could not be loaded: {e}"
-    )
+m.add_gdf(
+    study_area_gdf,
+    layer_name="Study Area",
+    zoom_to_layer=False,
+    info_mode="on_click",
+    style={
+        "color": "#ffffff",
+        "weight": 3,
+        "fillColor": "#ffffff",
+        "fillOpacity": 0.0,
+    },
+)
 
 
 # =========================================================
-# 6. HEX BINS
+# HEX BINS
 # =========================================================
 
-try:
+m.add_gdf(
+    hex_gdf,
+    layer_name="Hex Bins",
+    zoom_to_layer=False,
+    info_mode="on_click",
+    opacity=0.7,
+    style={
+        "color": "#ffff00",
+        "weight": 1,
+        "fillColor": "#ffff00",
+        "fillOpacity": 0.0,
+    },
+)
 
-    hex_response = requests.get(
-        hex_bins_url,
-        timeout=120,
-    )
 
-    hex_response.raise_for_status()
+# =========================================================
+# LAYER CONTROL
+# =========================================================
 
-    hex_bins_geojson = hex_response.json()
-
-    hex_bins_layer = folium.FeatureGroup(
-        name="Hex Bins",
-        show=False,
-    )
-
-    folium.GeoJson(
-        hex_bins_geojson,
-        name="Hex Bins",
-        style_function=lambda feature: {
-            "color": "black",
-            "weight": 0.5,
-            "fillColor": "transparent",
-            "fillOpacity": 0.0,
-        },
-    ).add_to(hex_bins_layer)
-
-    hex_bins_layer.add_to(m)
-
-except Exception as e:
-
-    st.warning(
-        f"Hex Bins could not be loaded: {e}"
-    )
+m.add_layer_control()
 
 
 # =========================================================
@@ -230,5 +197,4 @@ except Exception as e:
 
 m.to_streamlit(
     height=750,
-    add_layer_control=True,
 )
