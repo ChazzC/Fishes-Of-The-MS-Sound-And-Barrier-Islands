@@ -42,10 +42,8 @@ with st.expander("See source code"):
             name="Elevation & Bathymetry",
             bands=[1],
             rescale="-19.212,57.122",
-            return_mask=True,
-            colormap_name='batlow'
-                   
-        )           
+            colormap_name="terrain",
+        )          
 
         m.add_heatmap(
             filepath,
