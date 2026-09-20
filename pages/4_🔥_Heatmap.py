@@ -1,4 +1,5 @@
 import numpy as np
+import json
 import streamlit as st
 import leafmap.foliumap as leafmap
 
@@ -35,6 +36,20 @@ with st.expander("See source code"):
         )
 
         m = leafmap.Map(center=[31, -88], zoom=8)
+        # Custom bathymetry/elevation color ramp
+custom_colormap = json.dumps({
+    "-19.212": "#08306B",   # deep blue - deepest water
+    "-15":     "#08519C",
+    "-10":     "#2171B5",
+    "-5":      "#41B6C4",   # shallow water
+    "0":       "#00A65A",   # sea level
+    "2":       "#7FCF3F",
+    "5":       "#D9EF3D",
+    "10":      "#FEE08B",
+    "20":      "#F46D43",
+    "35":      "#D73027",
+    "57.122":  "#7F3B08",   # highest elevation
+})
 
         # Add the Cloud Optimized GeoTIFF
         m.add_cog_layer(
@@ -42,7 +57,7 @@ with st.expander("See source code"):
             name="Elevation & Bathymetry",
             bands=[1],
             rescale="-19.212,57.122",
-            colormap_name="terrain",
+            colormap=custom_colormap,
         )          
 
         m.add_heatmap(
