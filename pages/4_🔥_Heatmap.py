@@ -18,7 +18,9 @@ st.title("Heatmap")
 with st.expander("See source code"):
     with st.echo():
         filepath = "https://raw.githubusercontent.com/giswqs/leafmap/master/examples/data/us_cities.csv"
+        dem_filepath = "https://github.com/ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/blob/main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
         m = leafmap.Map(center=[40, -100], zoom=4)
+        m.add_raster(dem_filepath, colormap="terrain", layer_name="DEM")
         m.add_heatmap(
             filepath,
             latitude="latitude",
