@@ -5,22 +5,43 @@ st.set_page_config(layout="wide")
 
 st.sidebar.info("""
     - Web App URL: <https://streamlit.gishub.org>
-    - GitHub repository: <https://github.com/opengeos/streamlit-geospatial>
-    """)
+    - GitHub repository: https://github.com/opengeos/streamlit-geospatial
+""")
 
 st.sidebar.title("Contact")
 st.sidebar.info("""
-    Qiusheng Wu at [wetlands.io](https://wetlands.io) | [GitHub](https://github.com/giswqs) | [Twitter](https://twitter.com/giswqs) | [YouTube](https://youtube.com/@giswqs) | [LinkedIn](https://www.linkedin.com/in/giswqs)
-    """)
+    Qiusheng Wu at [wetlands.io](https://wetlands.io) |
+    [GitHub](https://github.com/giswqs) |
+    [Twitter](https://twitter.com/giswqs) |
+    [YouTube](https://youtube.com/@giswqs) |
+    [LinkedIn](https://www.linkedin.com/in/giswqs)
+""")
 
 st.title("Heatmap")
 
 with st.expander("See source code"):
     with st.echo():
-        filepath = "https://raw.githubusercontent.com/giswqs/leafmap/master/examples/data/us_cities.csv"
-        dem_filepath = dem_filepath = "https://raw.githubusercontent.com/ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
-        m = leafmap.Map(center=[31, -88], zoom=4)
-        m.add_raster(dem_filepath, colormap="terrain", layer_name="DEM")
+
+        filepath = (
+            "https://raw.githubusercontent.com/"
+            "giswqs/leafmap/master/examples/data/us_cities.csv"
+        )
+
+        dem_filepath = (
+            "https://raw.githubusercontent.com/"
+            "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
+            "main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
+        )
+
+        m = leafmap.Map(center=[31, -88], zoom=8)
+
+        # Add the Cloud Optimized GeoTIFF
+        m.add_cog_layer(
+            dem_filepath,
+            name="DEM",
+            colormap="terrain",
+        )
+
         m.add_heatmap(
             filepath,
             latitude="latitude",
@@ -29,4 +50,5 @@ with st.expander("See source code"):
             name="Heat map",
             radius=20,
         )
+
 m.to_streamlit(height=700)
