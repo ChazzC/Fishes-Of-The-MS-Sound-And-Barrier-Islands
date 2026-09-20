@@ -10,3 +10,4 @@ shapely
 requests
 earthengine-api
 rasterio
+ipyleaflet
