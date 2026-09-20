@@ -1,12 +1,11 @@
---find-links=https://girder.github.io/large_image_wheels GDAL
-folium
-geemap[extra]
-geopandas
-keplergl
-leafmap
-localtileserver
-plotly
-pyarrow
 streamlit
-streamlit-folium
-streamlit-keplergl
+leafmap
+geemap
+geopandas
+folium
+pandas
+pydeck
+fiona
+shapely
+requests
+earthengine-api
