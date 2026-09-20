@@ -9,3 +9,4 @@ fiona
 shapely
 requests
 earthengine-api
+rasterio
