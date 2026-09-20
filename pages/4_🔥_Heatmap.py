@@ -1,3 +1,4 @@
+import numpy as np
 import streamlit as st
 import leafmap.foliumap as leafmap
 
@@ -39,9 +40,11 @@ with st.expander("See source code"):
         m.add_cog_layer(
             dem_filepath,
             name="Elevation & Bathymetry",
+            bands=[1],
             colormap_name="terrain",
-            rescale="-19, 57",
-        )
+            rescale="-19.212,57.122",
+            nodata=np.nan,
+)            
 
         m.add_heatmap(
             filepath,
