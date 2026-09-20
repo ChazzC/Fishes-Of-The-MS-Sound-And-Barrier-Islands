@@ -1,9 +1,19 @@
 import streamlit as st
-import requests
+import leafmap.foliumap as leafmap
+import pandas as pd
 
 st.set_page_config(layout="wide")
 
-st.title("TiTiler COG Test")
+st.title("Heatmap")
+
+# ---------------------------------------------------------
+# Data
+# ---------------------------------------------------------
+
+filepath = (
+    "https://raw.githubusercontent.com/"
+    "giswqs/leafmap/master/examples/data/us_cities.csv"
+)
 
 dem_filepath = (
     "https://raw.githubusercontent.com/"
@@ -11,48 +21,49 @@ dem_filepath = (
     "main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
 )
 
-st.write("Testing TiTiler...")
+# ---------------------------------------------------------
+# Create map
+# ---------------------------------------------------------
 
-try:
+m = leafmap.Map(
+    center=[31, -88],
+    zoom=8,
+)
 
-    titiler_url = "https://titiler.opengeos.org/cog/preview"
+# ---------------------------------------------------------
+# TiTiler COG layer
+# ---------------------------------------------------------
 
-    params = {
-        "url": dem_filepath,
-        "bidx": 1,
-        "rescale": "-19.212,57.122",
-        "colormap_name": "terrain",
-    }
+titiler_tiles = (
+    "https://titiler.opengeos.org/cog/tiles/WebMercatorQuad/"
+    "{z}/{x}/{y}.png"
+    "?url=" + dem_filepath
+    + "&bidx=1"
+    + "&rescale=-19.212,57.122"
+    + "&colormap_name=terrain"
+)
 
-    response = requests.get(
-        titiler_url,
-        params=params,
-        timeout=30,
-    )
+m.add_tile_layer(
+    url=titiler_tiles,
+    name="Elevation & Bathymetry",
+    attribution="TiTiler",
+)
 
-    st.write("TiTiler HTTP status:", response.status_code)
+# ---------------------------------------------------------
+# Heatmap
+# ---------------------------------------------------------
 
-    st.write("Response type:", response.headers.get("content-type"))
+m.add_heatmap(
+    filepath,
+    latitude="latitude",
+    longitude="longitude",
+    value="pop_max",
+    name="Heat map",
+    radius=20,
+)
 
-    if response.ok:
+# ---------------------------------------------------------
+# Display
+# ---------------------------------------------------------
 
-        st.image(
-            response.content,
-            caption="TiTiler terrain test",
-            use_container_width=True,
-        )
-
-    else:
-
-        st.error("TiTiler returned an error.")
-
-        st.code(response.text)
-
-except requests.exceptions.Timeout:
-
-    st.error("TiTiler request timed out after 30 seconds.")
-
-except Exception as e:
-
-    st.error("Something went wrong:")
-    st.exception(e)
+m.to_streamlit(height=700)
