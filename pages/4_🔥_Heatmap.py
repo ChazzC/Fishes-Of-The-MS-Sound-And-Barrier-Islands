@@ -43,6 +43,7 @@ with st.expander("See source code"):
             bands=[1],
             rescale="-19.212,57.122",
             return_mask=True,
+            colormap_ramp='batlow'
                    
         )           
 
