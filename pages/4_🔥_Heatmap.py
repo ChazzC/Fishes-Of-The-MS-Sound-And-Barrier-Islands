@@ -2,6 +2,7 @@ import numpy as np
 import json
 import streamlit as st
 import leafmap.foliumap as leafmap
+import requests
 
 st.set_page_config(layout="wide")
 
@@ -34,6 +35,30 @@ with st.expander("See source code"):
             "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
             "main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
         )
+                # Test TiTiler directly
+        titiler_url = "https://titiler.opengeos.org/cog/preview"
+        
+        params = {
+            "url": dem_filepath,
+            "bidx": 1,
+            "rescale": "-19.212,57.122",
+            "colormap_name": "terrain",
+            "return_mask": True,
+        }
+        
+        response = requests.get(titiler_url, params=params)
+        
+        st.write("TiTiler status:", response.status_code)
+        
+        if response.ok:
+            st.image(
+                response.content,
+                caption="Direct TiTiler test",
+                use_container_width=True,
+            )
+        else:
+            st.error("TiTiler returned an error:")
+            st.code(response.text)
 
         m = leafmap.Map(center=[31, -88], zoom=8)
         # Custom bathymetry/elevation color ramp
@@ -54,13 +79,13 @@ with st.expander("See source code"):
 
         # Add the Cloud Optimized GeoTIFF
        # Add the COG
-        m.add_cog_layer(
-            dem_filepath,
-            name="Elevation & Bathymetry",
-            bands=[1],
-            rescale="-19.212,57.122",
-            colormap=custom_colormap,
-        )         
+        # m.add_cog_layer(
+        #     dem_filepath,
+        #     name="Elevation & Bathymetry",
+        #     bands=[1],
+        #     rescale="-19.212,57.122",
+        #     colormap=custom_colormap,
+        # )         
 
         m.add_heatmap(
             filepath,
