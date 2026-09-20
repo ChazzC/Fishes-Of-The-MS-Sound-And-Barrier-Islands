@@ -12,11 +12,11 @@ st.sidebar.info("""
 
 st.sidebar.title("Contact")
 st.sidebar.info("""
-    Qiusheng Wu at [wetlands.io](https://wetlands.io) |
-    [GitHub](https://github.com/giswqs) |
-    [Twitter](https://twitter.com/giswqs) |
-    [YouTube](https://youtube.com/@giswqs) |
-    [LinkedIn](https://www.linkedin.com/in/giswqs)
+    # Chazz Coleman at [wetlands.io](https://wetlands.io) |
+    [GitHub](https://github.com/ChazzC) |
+    # [Twitter](https://twitter.com/giswqs) |
+    # [YouTube](https://youtube.com/@giswqs) |
+    [LinkedIn](https://www.linkedin.com/in/chazz-coleman)
 """)
 
 st.title("Heatmap")
@@ -37,19 +37,19 @@ with st.expander("See source code"):
 
         m = leafmap.Map(center=[31, -88], zoom=8)
         # Custom bathymetry/elevation color ramp
-custom_colormap = json.dumps({
-    "-19.212": "#08306B",   # deep blue - deepest water
-    "-15":     "#08519C",
-    "-10":     "#2171B5",
-    "-5":      "#41B6C4",   # shallow water
-    "0":       "#00A65A",   # sea level
-    "2":       "#7FCF3F",
-    "5":       "#D9EF3D",
-    "10":      "#FEE08B",
-    "20":      "#F46D43",
-    "35":      "#D73027",
-    "57.122":  "#7F3B08",   # highest elevation
-})
+        custom_colormap = json.dumps({
+            "-19.212": "#08306B",   # deep blue - deepest water
+            "-15":     "#08519C",
+            "-10":     "#2171B5",
+            "-5":      "#41B6C4",   # shallow water
+            "0":       "#00A65A",   # sea level
+            "2":       "#7FCF3F",
+            "5":       "#D9EF3D",
+            "10":      "#FEE08B",
+            "20":      "#F46D43",
+            "35":      "#D73027",
+            "57.122":  "#7F3B08",   # highest elevation
+        })
 
         # Add the Cloud Optimized GeoTIFF
         m.add_cog_layer(
