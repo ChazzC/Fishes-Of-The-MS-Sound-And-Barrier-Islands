@@ -12,3 +12,4 @@ earthengine-api
 rasterio
 ipyleaflet
 localtileserver
+streamlit-folium
