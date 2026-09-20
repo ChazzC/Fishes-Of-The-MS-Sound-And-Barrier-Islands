@@ -1,24 +1,24 @@
 import streamlit as st
 import leafmap.foliumap as leafmap
-import pandas as pd
 
 st.set_page_config(layout="wide")
 
-st.title("Heatmap")
+st.title("Fish Records Heatmap")
 
 # ---------------------------------------------------------
-# Data
+# URLs
 # ---------------------------------------------------------
-
-filepath = (
-    "https://raw.githubusercontent.com/"
-    "giswqs/leafmap/master/examples/data/us_cities.csv"
-)
 
 dem_filepath = (
     "https://raw.githubusercontent.com/"
     "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
     "main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
+)
+
+fish_records_url = (
+    "https://raw.githubusercontent.com/"
+    "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
+    "main/data/Fish_Records.geojson"
 )
 
 # ---------------------------------------------------------
@@ -31,7 +31,7 @@ m = leafmap.Map(
 )
 
 # ---------------------------------------------------------
-# TiTiler COG layer
+# Bathymetry / elevation
 # ---------------------------------------------------------
 
 titiler_tiles = (
@@ -50,16 +50,12 @@ m.add_tile_layer(
 )
 
 # ---------------------------------------------------------
-# Heatmap
+# Fish records
 # ---------------------------------------------------------
 
-m.add_heatmap(
-    filepath,
-    latitude="latitude",
-    longitude="longitude",
-    value="pop_max",
-    name="Heat map",
-    radius=20,
+m.add_geojson(
+    fish_records_url,
+    layer_name="Fish Records",
 )
 
 # ---------------------------------------------------------
