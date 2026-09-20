@@ -11,3 +11,4 @@ requests
 earthengine-api
 rasterio
 ipyleaflet
+localtileserver
