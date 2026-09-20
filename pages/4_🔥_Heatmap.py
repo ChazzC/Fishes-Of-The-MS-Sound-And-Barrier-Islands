@@ -38,8 +38,9 @@ with st.expander("See source code"):
         # Add the Cloud Optimized GeoTIFF
         m.add_cog_layer(
             dem_filepath,
-            name="DEM",
-            colormap="terrain",
+            name="Elevation & Bathymetry",
+            colormap_name="terrain",
+            rescale="-19, 57",
         )
 
         m.add_heatmap(
