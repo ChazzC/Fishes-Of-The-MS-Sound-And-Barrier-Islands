@@ -12,7 +12,7 @@ st.sidebar.info("""
 
 st.sidebar.title("Contact")
 st.sidebar.info("""
-    # Chazz Coleman at [wetlands.io](https://wetlands.io) |
+    # Chazz Coleman at |
     [GitHub](https://github.com/ChazzC) |
     # [Twitter](https://twitter.com/giswqs) |
     # [YouTube](https://youtube.com/@giswqs) |
@@ -53,13 +53,14 @@ with st.expander("See source code"):
         })  
 
         # Add the Cloud Optimized GeoTIFF
+       # Add the COG
         m.add_cog_layer(
             dem_filepath,
             name="Elevation & Bathymetry",
             bands=[1],
             rescale="-19.212,57.122",
             colormap=custom_colormap,
-        )          
+        )         
 
         m.add_heatmap(
             filepath,
