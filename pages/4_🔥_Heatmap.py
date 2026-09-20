@@ -42,7 +42,7 @@ with st.expander("See source code"):
             "url": dem_filepath,
             "bidx": 1,
             "rescale": "-19.212,57.122",
-            "colormap_name": "terrain",
+            "colormap_name": "viridis",
             "return_mask": True,
         }
         
@@ -60,22 +60,22 @@ with st.expander("See source code"):
             st.error("TiTiler returned an error:")
             st.code(response.text)
 
-        m = leafmap.Map(center=[31, -88], zoom=8)
-        # Custom bathymetry/elevation color ramp
+        # m = leafmap.Map(center=[31, -88], zoom=8)
+        
           
-        custom_colormap = json.dumps({
-            "0":   "#08306B",
-            "14":  "#08519C",
-            "31":  "#2171B5",
-            "48":  "#41B6C4",
-            "64":  "#00A65A",
-            "71":  "#7FCF3F",
-            "81":  "#D9EF3D",
-            "98":  "#FEE08B",
-            "131": "#F46D43",
-            "181": "#D73027",
-            "255": "#7F3B08",
-        })  
+        # custom_colormap = json.dumps({
+        #     "0":   "#08306B",
+        #     "14":  "#08519C",
+        #     "31":  "#2171B5",
+        #     "48":  "#41B6C4",
+        #     "64":  "#00A65A",
+        #     "71":  "#7FCF3F",
+        #     "81":  "#D9EF3D",
+        #     "98":  "#FEE08B",
+        #     "131": "#F46D43",
+        #     "181": "#D73027",
+        #     "255": "#7F3B08",
+        # })  
 
         # Add the Cloud Optimized GeoTIFF
        # Add the COG
@@ -87,13 +87,13 @@ with st.expander("See source code"):
         #     colormap=custom_colormap,
         # )         
 
-        m.add_heatmap(
-            filepath,
-            latitude="latitude",
-            longitude="longitude",
-            value="pop_max",
-            name="Heat map",
-            radius=20,
-        )
+#         m.add_heatmap(
+#             filepath,
+#             latitude="latitude",
+#             longitude="longitude",
+#             value="pop_max",
+#             name="Heat map",
+#             radius=20,
+#         )
 
-m.to_streamlit(height=700)
+# m.to_streamlit(height=700)
