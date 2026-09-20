@@ -41,10 +41,9 @@ with st.expander("See source code"):
             dem_filepath,
             name="Elevation & Bathymetry",
             bands=[1],
-            colormap_name="terrain",
             rescale="-19.212,57.122",
-            nodata=np.nan,
-)            
+            return_mask=True,
+        )           
 
         m.add_heatmap(
             filepath,
