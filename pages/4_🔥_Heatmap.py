@@ -130,30 +130,35 @@ heatmap_points = []
 for geometry in fish_gdf.geometry:
 
     if geometry is not None and geometry.geom_type == "Point":
-
-        heatmap_points.append(
-            [
-                geometry.y,  # latitude
-                geometry.x,  # longitude
-                1            # each fish record has weight = 1
-            ]
-        )
+        heatmap_points.append([
+            geometry.y,   # latitude
+            geometry.x,   # longitude
+            1             # one observation = one unit of density
+        ])
 
 
-heatmap_group = folium.FeatureGroup(
-    name="Fish Observation Density",
-    show=True,
-)
+# Make sure we actually have points
+st.write(f"Fish observations used for heatmap: {len(heatmap_points):,}")
 
-HeatMap(
+
+m.add_heatmap(
     heatmap_points,
-    radius=18,
-    blur=15,
-    min_opacity=0.25,
+    latitude="latitude",
+    longitude="longitude",
+    value="value",
+    name="Fish Observation Density",
+    radius=30,
+    blur=25,
+    min_opacity=0.35,
     max_zoom=12,
-).add_to(heatmap_group)
-
-heatmap_group.add_to(m)
+    gradient={
+        0.20: "blue",
+        0.40: "cyan",
+        0.60: "lime",
+        0.80: "yellow",
+        1.00: "red",
+    },
+)
 
 
 # ---------------------------------------------------------
@@ -230,7 +235,7 @@ folium.GeoJson(
     name="Hex Bins",
     style_function=lambda feature: {
         "color": "yellow",
-        "weight": 1,
+        "weight": 0.25,
         "fillColor": "yellow",
         "fillOpacity": 0.0,
     },
