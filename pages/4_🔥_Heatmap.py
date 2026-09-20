@@ -1,52 +1,52 @@
 import streamlit as st
 import leafmap.foliumap as leafmap
 import geopandas as gpd
-
+import folium
+from folium.plugins import HeatMap
 
 st.set_page_config(layout="wide")
 
 st.title("Fish Records Heatmap")
 
 
-# =========================================================
+# ---------------------------------------------------------
 # DATA URLS
-# =========================================================
+# ---------------------------------------------------------
 
 dem_filepath = (
-    "https://raw.githubusercontent.com/"
-    "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
-    "main/data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/Elevation_and_Bathymertry_Study_Area.tiff.tif"
 )
 
 fish_records_url = (
-    "https://raw.githubusercontent.com/"
-    "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
-    "main/data/Fish_Records.geojson"
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/Fish_Records.geojson"
 )
 
 hex_bins_url = (
-    "https://raw.githubusercontent.com/"
-    "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
-    "main/data/Hex_Bins.geojson"
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/Hex_Bins.geojson"
 )
 
 study_area_url = (
-    "https://raw.githubusercontent.com/"
-    "ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands/"
-    "main/data/StudyArea.geojson"
+    "https://raw.githubusercontent.com/ChazzC/"
+    "Fishes-Of-The-MS-Sound-And-Barrier-Islands/main/"
+    "data/StudyArea.geojson"
 )
 
 
-# =========================================================
+# ---------------------------------------------------------
 # LOAD VECTOR DATA
-# =========================================================
+# ---------------------------------------------------------
 
 @st.cache_data
 def load_vector_data(url):
-
     gdf = gpd.read_file(url)
 
-    # Convert everything to WGS84 for Leaflet
+    # Leaflet/Folium expects geographic coordinates
     if gdf.crs is not None:
         gdf = gdf.to_crs("EPSG:4326")
 
@@ -54,13 +54,13 @@ def load_vector_data(url):
 
 
 fish_gdf = load_vector_data(fish_records_url)
-study_area_gdf = load_vector_data(study_area_url)
 hex_gdf = load_vector_data(hex_bins_url)
+study_area_gdf = load_vector_data(study_area_url)
 
 
-# =========================================================
+# ---------------------------------------------------------
 # CREATE MAP
-# =========================================================
+# ---------------------------------------------------------
 
 m = leafmap.Map(
     center=[30.9, -88.3],
@@ -69,19 +69,37 @@ m = leafmap.Map(
 )
 
 
-# =========================================================
+# ---------------------------------------------------------
 # BASEMAP
-# =========================================================
+# ---------------------------------------------------------
 
-m.add_basemap(
-    "Esri.WorldImagery",
+# Esri World Imagery
+folium.TileLayer(
+    tiles=(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/"
+        "World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    ),
+    attr="Esri World Imagery",
+    name="Satellite Imagery",
+    overlay=False,
+    control=True,
     show=True,
-)
+).add_to(m)
 
 
-# =========================================================
-# ELEVATION & BATHYMETRY
-# =========================================================
+# Optional OpenStreetMap basemap
+folium.TileLayer(
+    tiles="OpenStreetMap",
+    name="OpenStreetMap",
+    overlay=False,
+    control=True,
+    show=False,
+).add_to(m)
+
+
+# ---------------------------------------------------------
+# ELEVATION / BATHYMETRY RASTER
+# ---------------------------------------------------------
 
 titiler_tiles = (
     "https://titiler.opengeos.org/cog/tiles/WebMercatorQuad/"
@@ -92,20 +110,20 @@ titiler_tiles = (
     + "&colormap_name=terrain"
 )
 
-m.add_tile_layer(
-    url=titiler_tiles,
+folium.TileLayer(
+    tiles=titiler_tiles,
+    attr="TiTiler",
     name="Elevation & Bathymetry",
-    attribution="TiTiler",
     overlay=True,
     control=True,
-    shown=False,
+    show=False,
     opacity=0.75,
-)
+).add_to(m)
 
 
-# =========================================================
-# FISH OBSERVATION DENSITY
-# =========================================================
+# ---------------------------------------------------------
+# FISH OBSERVATION DENSITY HEATMAP
+# ---------------------------------------------------------
 
 heatmap_points = []
 
@@ -115,86 +133,127 @@ for geometry in fish_gdf.geometry:
 
         heatmap_points.append(
             [
-                geometry.y,
-                geometry.x,
-                1,
+                geometry.y,  # latitude
+                geometry.x,  # longitude
+                1            # each fish record has weight = 1
             ]
         )
 
 
-m.add_heatmap(
-    heatmap_points,
+heatmap_group = folium.FeatureGroup(
     name="Fish Observation Density",
+    show=True,
+)
+
+HeatMap(
+    heatmap_points,
     radius=18,
-)
+    blur=15,
+    min_opacity=0.25,
+    max_zoom=12,
+).add_to(heatmap_group)
+
+heatmap_group.add_to(m)
 
 
-# =========================================================
+# ---------------------------------------------------------
 # INDIVIDUAL FISH RECORDS
-# =========================================================
+# ---------------------------------------------------------
 
-m.add_gdf(
-    fish_gdf,
-    layer_name="Individual Fish Records",
-    zoom_to_layer=False,
-    info_mode="on_hover",
-    opacity=0.8,
-    style={
-        "color": "#0066cc",
-        "fillColor": "#0066cc",
-        "radius": 4,
-    },
+fish_group = folium.FeatureGroup(
+    name="Individual Fish Records",
+    show=False,
 )
 
+folium.GeoJson(
+    fish_gdf.to_json(),
+    name="Individual Fish Records",
+    tooltip=folium.GeoJsonTooltip(
+        fields=[
+            field
+            for field in fish_gdf.columns
+            if field != "geometry"
+        ],
+        aliases=[
+            field
+            for field in fish_gdf.columns
+            if field != "geometry"
+        ],
+        localize=True,
+        sticky=False,
+    ),
+    marker=folium.CircleMarker(
+        radius=3,
+        fill=True,
+        fill_opacity=0.8,
+        opacity=0.8,
+    ),
+).add_to(fish_group)
 
-# =========================================================
+fish_group.add_to(m)
+
+
+# ---------------------------------------------------------
 # STUDY AREA
-# =========================================================
+# ---------------------------------------------------------
 
-m.add_gdf(
-    study_area_gdf,
-    layer_name="Study Area",
-    zoom_to_layer=False,
-    info_mode="on_click",
-    style={
-        "color": "#ffffff",
+study_group = folium.FeatureGroup(
+    name="Study Area",
+    show=True,
+)
+
+folium.GeoJson(
+    study_area_gdf.to_json(),
+    name="Study Area",
+    style_function=lambda feature: {
+        "color": "white",
         "weight": 3,
-        "fillColor": "#ffffff",
+        "fillColor": "white",
         "fillOpacity": 0.0,
     },
-)
+).add_to(study_group)
+
+study_group.add_to(m)
 
 
-# =========================================================
+# ---------------------------------------------------------
 # HEX BINS
-# =========================================================
+# ---------------------------------------------------------
 
-m.add_gdf(
-    hex_gdf,
-    layer_name="Hex Bins",
-    zoom_to_layer=False,
-    info_mode="on_click",
-    opacity=0.7,
-    style={
-        "color": "#ffff00",
-        "weight": 1,
-        "fillColor": "#ffff00",
-        "fillOpacity": 0.0,
-    },
+hex_group = folium.FeatureGroup(
+    name="Hex Bins",
+    show=True,
 )
 
+folium.GeoJson(
+    hex_gdf.to_json(),
+    name="Hex Bins",
+    style_function=lambda feature: {
+        "color": "yellow",
+        "weight": 1,
+        "fillColor": "yellow",
+        "fillOpacity": 0.0,
+    },
+).add_to(hex_group)
 
-# =========================================================
+hex_group.add_to(m)
+
+
+# ---------------------------------------------------------
 # LAYER CONTROL
-# =========================================================
+# ---------------------------------------------------------
 
-m.add_layer_control()
+folium.LayerControl(
+    position="topright",
+    collapsed=False,
+).add_to(m)
 
 
-# =========================================================
+# ---------------------------------------------------------
 # DISPLAY
-# =========================================================
+# ---------------------------------------------------------
 
 m.to_streamlit(
     height=750,
+    add_layer_control=False,
 )
