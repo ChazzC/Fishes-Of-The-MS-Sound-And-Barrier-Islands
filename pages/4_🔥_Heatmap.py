@@ -362,7 +362,7 @@ folium.GeoJson(
     # White outline with transparent fill
     style_function=lambda feature: {
         "color": "white",
-        "weight": 0.5,
+        "weight": 0.15,
         "fillColor": "yellow",
         "fillOpacity": 0.0,
     },
