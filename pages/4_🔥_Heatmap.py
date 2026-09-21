@@ -73,7 +73,7 @@ FIELD_ALIASES = {
     "SAL_HIGH": "Salinity (High Range)",
     "SAL_LOW": "Salinity (Low Range)",
     "areaname": "Area Name",
-    "CSU_Descriptor": "CSU Description",
+    "CSU_Descriptor": "Coastal Segment Unit Description",
 }
 
 
@@ -357,8 +357,8 @@ for geom in fish_heatmap.geometry:
 m.add_heatmap(
     heatmap_points,
     name="Fish Observation Density",
-    radius=30,
-    blur=25,
+    radius=20,
+    blur=15,
     min_opacity=0.35,
     max_zoom=12,
 )
@@ -463,9 +463,9 @@ folium.GeoJson(
 
     hex_geojson,
 
-    # Yellow outline with transparent fill
+    # White outline with transparent fill
     style_function=lambda feature: {
-        "color": "yellow",
+        "color": "white",
         "weight": 0.5,
         "fillColor": "yellow",
         "fillOpacity": 0.0,
