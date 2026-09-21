@@ -597,11 +597,6 @@ folium.TileLayer(
 
 # ============================================================
 # HEX BINS
-#
-# Transparent yellow polygons.
-#
-# The custom pane places them ABOVE the heatmap so clicks
-# are received by the hexagons.
 # ============================================================
 
 hex_group = folium.FeatureGroup(
@@ -611,10 +606,8 @@ hex_group = folium.FeatureGroup(
     control=True,
 )
 
-hex_geojson_layer = folium.GeoJson(
-
+folium.GeoJson(
     hex_geojson,
-
     name="Hexagons",
 
     style_function=lambda feature: {
@@ -633,13 +626,16 @@ hex_geojson_layer = folium.GeoJson(
         "fillOpacity": 0.20,
     },
 
-    zoom_on_click=False,
+    # This popup is deliberately tiny/invisible.
+    # It gives st_folium a clickable object to report.
+    tooltip=folium.GeoJsonTooltip(
+        fields=["id"],
+        aliases=["Hex ID"],
+        sticky=False,
+        labels=False,
+    ),
 
-)
-
-hex_geojson_layer.add_to(
-    hex_group
-)
+).add_to(hex_group)
 
 hex_group.add_to(m)
 
@@ -793,48 +789,46 @@ map_data = st_folium(
     height=750,
     width=None,
     returned_objects=[
-        "last_active_drawing",
         "last_object_clicked",
         "last_object_clicked_tooltip",
         "last_object_clicked_popup",
+        "last_active_drawing",
     ],
 )
 
 
 # ============================================================
-# DEBUG / PROCESS HEXAGON CLICK
+# PROCESS HEXAGON CLICK
 # ============================================================
 
-active = None
+clicked = None
 
 if map_data:
-
-    active = map_data.get(
-        "last_active_drawing"
+    clicked = map_data.get(
+        "last_object_clicked"
     )
 
 
-if active:
+# Try the normal clicked-object result first.
+if clicked:
 
-    properties = active.get(
-        "properties",
-        {},
-    )
+    # Depending on the Leaflet object, the returned
+    # structure can contain the feature properties directly.
+    if isinstance(clicked, dict):
 
-    # We specifically tagged every hexagon
-    # with _layer_type = "hex".
-    if properties.get(
-        "_layer_type"
-    ) == "hex":
+        properties = clicked.get(
+            "properties",
+            clicked,
+        )
 
-        active_hex_id = properties.get(
+        hex_id = properties.get(
             "id"
         )
 
-        if active_hex_id is not None:
+        if hex_id is not None:
 
             selected_row = hex_lookup.get(
-                str(active_hex_id)
+                str(hex_id)
             )
 
             if selected_row is not None:
@@ -843,8 +837,50 @@ if active:
                     selected_row.to_dict()
                 )
 
-                # A new hex means a new species selection.
                 st.session_state.selected_species = None
+
+
+# ============================================================
+# FALLBACK: last_active_drawing
+# ============================================================
+
+if (
+    st.session_state.selected_hex is None
+    and map_data
+):
+
+    active = map_data.get(
+        "last_active_drawing"
+    )
+
+    if active:
+
+        properties = active.get(
+            "properties",
+            {},
+        )
+
+        if properties.get(
+            "_layer_type"
+        ) == "hex":
+
+            hex_id = properties.get(
+                "id"
+            )
+
+            if hex_id is not None:
+
+                selected_row = hex_lookup.get(
+                    str(hex_id)
+                )
+
+                if selected_row is not None:
+
+                    st.session_state.selected_hex = (
+                        selected_row.to_dict()
+                    )
+
+                    st.session_state.selected_species = None
 
 
 # ============================================================
