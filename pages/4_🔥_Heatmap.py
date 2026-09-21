@@ -390,7 +390,7 @@ folium.GeoJson(
     ),
 
     marker=folium.CircleMarker(
-        radius=3,
+        radius=1,
         fill=True,
         fill_opacity=0.8,
         opacity=0.8,
@@ -453,27 +453,6 @@ hex_group = folium.FeatureGroup(
 # Fields displayed in the hexagon popup
 # ------------------------------------------------------------
 
-hex_popup_fields = [
-    "max_elevation",
-    "min_elevation",
-    "dom_condition",
-    "hab_group",
-    "SAL_HIGH",
-    "SAL_LOW",
-    "areaname",
-    "CSU_Descriptor",
-]
-
-hex_popup_aliases = [
-    "Maximum Elevation / Depth",
-    "Minimum Elevation / Depth",
-    "Dominant Bottom Condition",
-    "Habitat Group",
-    "Salinity (High)",
-    "Salinity (Low)",
-    "Area Name",
-    "CSU Description",
-]
 
 
 # ------------------------------------------------------------
@@ -487,7 +466,7 @@ folium.GeoJson(
     # Yellow outline with transparent fill
     style_function=lambda feature: {
         "color": "yellow",
-        "weight": 1,
+        "weight": 0.5,
         "fillColor": "yellow",
         "fillOpacity": 0.0,
     },
@@ -507,15 +486,7 @@ folium.GeoJson(
         sticky=False,
     ),
 
-    # Popup when clicking a hexagon
-    popup=folium.GeoJsonPopup(
-        fields=hex_popup_fields,
-        aliases=hex_popup_aliases,
-        localize=True,
-        labels=True,
-        sticky=False,
-        max_width=450,
-    ),
+    
 
 ).add_to(hex_group)
 
