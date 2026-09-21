@@ -66,12 +66,12 @@ github_raw_base = (
 # ============================================================
 
 FIELD_ALIASES = {
-    "max_elevation": "Maximum Elevation / Depth",
-    "min_elevation": "Minimum Elevation / Depth",
-    "dom_condition": "Dominant Bottom Condition",
-    "hab_group": "Habitat Group",
-    "SAL_HIGH": "Salinity (High)",
-    "SAL_LOW": "Salinity (Low)",
+    "max_elevation": "Maximum Elevation",
+    "min_elevation": "Minimum Elevation",
+    "dom_condition": "Dominant Substrate",
+    "hab_group": "Vegetation",
+    "SAL_HIGH": "Salinity (High Range)",
+    "SAL_LOW": "Salinity (Low Range)",
     "areaname": "Area Name",
     "CSU_Descriptor": "CSU Description",
 }
@@ -229,7 +229,22 @@ def find_species_metadata(species_name):
             return record
 
     return None
+def species_display_name(species_name):
+    """
+    Return scientific name followed by common name.
+    Example:
+        Etropus crossotus, Fringed Flounder
+    """
 
+    record = find_species_metadata(species_name)
+
+    if record:
+        common_name = record.get("common_name")
+
+        if common_name:
+            return f"{species_name}, {common_name}"
+
+    return species_name
 
 # ============================================================
 # STREAMLIT SESSION STATE
@@ -649,21 +664,17 @@ if selected_hex:
         if species:
 
             for sp in species:
-
+        
+                display_name = species_display_name(sp)
+        
                 if st.button(
-                    sp,
+                    display_name,
                     key=f"species_{sp}",
                     use_container_width=True,
                 ):
 
+                    # Keep the scientific name as the internal value.
                     st.session_state.selected_species = sp
-
-        else:
-
-            st.info(
-                "No fish species are listed "
-                "for this hexagon."
-            )
 
 
     # ========================================================
