@@ -327,6 +327,70 @@ folium.TileLayer(
 
 
 # ============================================================
+# HEX BINS
+# ============================================================
+
+# Convert GeoDataFrame to GeoJSON dictionary.
+hex_geojson = json.loads(
+    hex_gdf.to_json()
+)
+
+
+# Add an internal property so Streamlit can identify
+# that the clicked feature is a hexagon.
+for feature in hex_geojson["features"]:
+
+    feature.setdefault("properties", {})
+
+    feature["properties"]["_layer_type"] = "hex"
+
+
+hex_group = folium.FeatureGroup(
+    name="Hex Bins",
+    show=True
+)
+
+
+# ------------------------------------------------------------
+# Add hexagons
+# ------------------------------------------------------------
+
+folium.GeoJson(
+
+    hex_geojson,
+
+    # White outline with transparent fill
+    style_function=lambda feature: {
+        "color": "white",
+        "weight": 0.5,
+        "fillColor": "yellow",
+        "fillOpacity": 0.0,
+    },
+
+    # Highlight selected/hovered hexagon
+    highlight_function=lambda feature: {
+        "color": "white",
+        "weight": 3,
+        "fillColor": "yellow",
+        "fillOpacity": 0.15,
+    },
+
+    # Small tooltip when hovering
+    # tooltip=folium.GeoJsonTooltip(
+    #     fields=["id"],
+    #     aliases=["Hexagon ID"],
+    #     sticky=False,
+    # ),
+
+    
+
+).add_to(hex_group)
+
+
+hex_group.add_to(m)
+
+
+# ============================================================
 # FISH OBSERVATION HEATMAP
 #
 # Each fish record receives a weight of 1.
@@ -424,74 +488,7 @@ folium.GeoJson(
 study_group.add_to(m)
 
 
-# ============================================================
-# HEX BINS
-# ============================================================
 
-# Convert GeoDataFrame to GeoJSON dictionary.
-hex_geojson = json.loads(
-    hex_gdf.to_json()
-)
-
-
-# Add an internal property so Streamlit can identify
-# that the clicked feature is a hexagon.
-for feature in hex_geojson["features"]:
-
-    feature.setdefault("properties", {})
-
-    feature["properties"]["_layer_type"] = "hex"
-
-
-hex_group = folium.FeatureGroup(
-    name="Hex Bins",
-    show=True
-)
-
-
-# ------------------------------------------------------------
-# Fields displayed in the hexagon popup
-# ------------------------------------------------------------
-
-
-
-# ------------------------------------------------------------
-# Add hexagons
-# ------------------------------------------------------------
-
-folium.GeoJson(
-
-    hex_geojson,
-
-    # White outline with transparent fill
-    style_function=lambda feature: {
-        "color": "white",
-        "weight": 0.5,
-        "fillColor": "yellow",
-        "fillOpacity": 0.0,
-    },
-
-    # Highlight selected/hovered hexagon
-    highlight_function=lambda feature: {
-        "color": "white",
-        "weight": 3,
-        "fillColor": "yellow",
-        "fillOpacity": 0.15,
-    },
-
-    # Small tooltip when hovering
-    # tooltip=folium.GeoJsonTooltip(
-    #     fields=["id"],
-    #     aliases=["Hexagon ID"],
-    #     sticky=False,
-    # ),
-
-    
-
-).add_to(hex_group)
-
-
-hex_group.add_to(m)
 
 
 # ============================================================
