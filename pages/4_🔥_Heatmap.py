@@ -480,11 +480,11 @@ folium.GeoJson(
     },
 
     # Small tooltip when hovering
-    tooltip=folium.GeoJsonTooltip(
-        fields=["id"],
-        aliases=["Hexagon ID"],
-        sticky=False,
-    ),
+    # tooltip=folium.GeoJsonTooltip(
+    #     fields=["id"],
+    #     aliases=["Hexagon ID"],
+    #     sticky=False,
+    # ),
 
     
 
