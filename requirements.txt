@@ -13,3 +13,4 @@ rasterio
 ipyleaflet
 localtileserver
 streamlit-folium
+Pillow
