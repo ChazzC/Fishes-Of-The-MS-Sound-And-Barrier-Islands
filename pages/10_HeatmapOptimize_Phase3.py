@@ -177,11 +177,15 @@ def load_hex_lookup(url):
     # Remove geometry because it is not needed after a click.
     # The resulting dictionary contains all environmental and
     # species attributes needed by the selected-hex panel.
-    return (
-        gdf.drop(columns="geometry")
-        .set_index("id")
-        .to_dict(orient="index")
-    )
+    records = gdf.drop(columns="geometry").to_dict(orient="records")
+
+    # Leaflet sends the hex ID back as a JSON value. Normalize
+    # the lookup keys to strings so numeric/string ID differences
+    # cannot prevent a clicked hex from being found.
+    return {
+        str(record["id"]): record
+        for record in records
+    }
 
 
 # ============================================================
