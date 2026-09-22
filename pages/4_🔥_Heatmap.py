@@ -17,7 +17,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🐟 Fish Records Heatmap")
+st.title("ðŸŸ Fish Records Heatmap")
 
 
 # ============================================================
@@ -268,6 +268,20 @@ m = leafmap.Map(
 )
 
 
+
+# Make the fish heatmap visual-only so it cannot intercept clicks.
+st.markdown(
+    '''
+    <style>
+    .leaflet-heatmap-layer {
+        pointer-events: none !important;
+    }
+    </style>
+    ''',
+    unsafe_allow_html=True,
+)
+
+
 # ============================================================
 # BASEMAP: SATELLITE
 # ============================================================
@@ -324,70 +338,6 @@ folium.TileLayer(
     show=False,
     opacity=0.75,
 ).add_to(m)
-
-
-# ============================================================
-# HEX BINS
-# ============================================================
-
-# Convert GeoDataFrame to GeoJSON dictionary.
-hex_geojson = json.loads(
-    hex_gdf.to_json()
-)
-
-
-# Add an internal property so Streamlit can identify
-# that the clicked feature is a hexagon.
-for feature in hex_geojson["features"]:
-
-    feature.setdefault("properties", {})
-
-    feature["properties"]["_layer_type"] = "hex"
-
-
-hex_group = folium.FeatureGroup(
-    name="Hex Bins",
-    show=True
-)
-
-
-# ------------------------------------------------------------
-# Add hexagons
-# ------------------------------------------------------------
-
-folium.GeoJson(
-
-    hex_geojson,
-
-    # White outline with transparent fill
-    style_function=lambda feature: {
-        "color": "white",
-        "weight": 0.15,
-        "fillColor": "yellow",
-        "fillOpacity": 0.0,
-    },
-
-    # Highlight selected/hovered hexagon
-    highlight_function=lambda feature: {
-        "color": "white",
-        "weight": 3,
-        "fillColor": "yellow",
-        "fillOpacity": 0.15,
-    },
-
-    # Small tooltip when hovering
-    # tooltip=folium.GeoJsonTooltip(
-    #     fields=["id"],
-    #     aliases=["Hexagon ID"],
-    #     sticky=False,
-    # ),
-
-    
-
-).add_to(hex_group)
-
-
-hex_group.add_to(m)
 
 
 # ============================================================
@@ -483,9 +433,78 @@ folium.GeoJson(
         "fillOpacity": 0.0,
     },
 
+    # The Study Area is visual only and must not intercept hex clicks.
+    interactive=False,
+
 ).add_to(study_group)
 
 study_group.add_to(m)
+
+
+# ============================================================
+# HEX BINS
+# ============================================================
+
+# Convert GeoDataFrame to GeoJSON dictionary.
+hex_geojson = json.loads(
+    hex_gdf.to_json()
+)
+
+
+# Add an internal property so Streamlit can identify
+# that the clicked feature is a hexagon.
+for feature in hex_geojson["features"]:
+
+    feature.setdefault("properties", {})
+
+    feature["properties"]["_layer_type"] = "hex"
+
+
+hex_group = folium.FeatureGroup(
+    name="Hex Bins",
+    show=True
+)
+
+
+# ------------------------------------------------------------
+# Add hexagons
+# ------------------------------------------------------------
+
+folium.GeoJson(
+
+    hex_geojson,
+
+    # White outline with transparent fill
+    style_function=lambda feature: {
+        "color": "white",
+        "weight": 0.15,
+        "fillColor": "yellow",
+        # Nearly invisible, but provides a real clickable polygon area.
+        "fillOpacity": 0.001,
+    },
+
+    # Highlight selected/hovered hexagon
+    highlight_function=lambda feature: {
+        "color": "white",
+        "weight": 3,
+        "fillColor": "yellow",
+        "fillOpacity": 0.15,
+    },
+
+    # Small tooltip when hovering
+    # tooltip=folium.GeoJsonTooltip(
+    #     fields=["id"],
+    #     aliases=["Hexagon ID"],
+    #     sticky=False,
+    # ),
+
+    
+
+).add_to(hex_group)
+
+
+hex_group.add_to(m)
+
 
 
 
