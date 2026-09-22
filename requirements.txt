@@ -5,10 +5,10 @@ geopandas
 folium
 pandas
 pydeck
-fiona
+
 shapely
 requests
-earthengine-api
+
 rasterio
 ipyleaflet
 localtileserver
