@@ -6,12 +6,12 @@ st.set_page_config(layout="wide")
 st.sidebar.title("About")
 st.sidebar.info("""
     - Web App URL: <https://fishes-of-the-ms-sound-and-barrier-islands.streamlit.app/>
-    - GitHub repository: <https://github.com/opengeos/streamlit-geospatial>
+    - GitHub repository: <https://github.com/ChazzC/Fishes-Of-The-MS-Sound-And-Barrier-Islands>
     """)
 
 st.sidebar.title("Contact")
 st.sidebar.info("""
-    Chazz Coleman at [wix](https://chazzccoleman.wixsite.com/ccc-geospatial) | [GitHub](https://github.com/ChazzC) | [LinkedIn](linkedin.com/in/chazz-coleman)
+    Chazz Coleman at [Personal Website](https://chazzccoleman.wixsite.com/ccc-geospatial) | [GitHub](https://github.com/ChazzC) | [LinkedIn](linkedin.com/in/chazz-coleman)
     """)
 
 st.sidebar.title("Support")
@@ -24,11 +24,13 @@ st.sidebar.info("""
 st.title("Fishes of the Mississippi Sound and Barrier Islands")
 
 st.markdown("""
-    This multi-page web app demonstrates various interactive web apps created using [streamlit](https://streamlit.io) and open-source mapping libraries,
-    such as [leafmap](https://leafmap.org), [geemap](https://geemap.org), [pydeck](https://deckgl.readthedocs.io), and [kepler.gl](https://docs.kepler.gl/docs/keplergl-jupyter).
-    This is an open-source project and you are very welcome to contribute your comments, questions, resources, and apps as [issues](https://github.com/opengeos/streamlit-geospatial/issues) or
-    [pull requests](https://github.com/opengeos/streamlit-geospatial/pulls) to the [GitHub repository](https://github.com/opengeos/streamlit-geospatial).
-
+    This multi-page web app demonstrates an interactive web app created using [streamlit](https://streamlit.io) and open-source mapping libraries,
+    such as [leafmap](https://leafmap.org). The fish records/occurences were compiled from multiple sources and span decades. Source attributions are within the fish point layer.
+    Institution collections on GBIF: Mississippi Museum of Natural Science, University of Alabama
+    Institution collections that were self hosted: University of Southern Mississippi Ichthyology Collection
+    SEAMAP Bottom Long Line survey data
+    SEAMAP Groundfish survey data
+    Research Grade iNaturalist observations
     """)
 
 st.info("Click on the left sidebar menu to navigate to the different apps.")
