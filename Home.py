@@ -5,13 +5,13 @@ st.set_page_config(layout="wide")
 
 st.sidebar.title("About")
 st.sidebar.info("""
-    - Web App URL: <https://streamlit.gishub.org>
+    - Web App URL: <https://fishes-of-the-ms-sound-and-barrier-islands.streamlit.app/>
     - GitHub repository: <https://github.com/opengeos/streamlit-geospatial>
     """)
 
 st.sidebar.title("Contact")
 st.sidebar.info("""
-    Qiusheng Wu at [wetlands.io](https://wetlands.io) | [GitHub](https://github.com/giswqs) | [Twitter](https://twitter.com/giswqs) | [YouTube](https://youtube.com/@giswqs) | [LinkedIn](https://www.linkedin.com/in/giswqs)
+    Chazz Coleman at [wix](https://chazzccoleman.wixsite.com/ccc-geospatial) | [GitHub](https://github.com/ChazzC) | [LinkedIn](linkedin.com/in/chazz-coleman)
     """)
 
 st.sidebar.title("Support")
@@ -21,7 +21,7 @@ st.sidebar.info("""
     """)
 
 
-st.title("Streamlit for Geospatial Applications")
+st.title("Fishes of the Mississippi Sound and Barrier Islands")
 
 st.markdown("""
     This multi-page web app demonstrates various interactive web apps created using [streamlit](https://streamlit.io) and open-source mapping libraries,
