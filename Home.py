@@ -27,7 +27,7 @@ st.markdown("""
     This multi-page web app demonstrates an interactive web app created using [streamlit](https://streamlit.io) and open-source mapping libraries,
     such as [leafmap](https://leafmap.org). The fish records/occurences were compiled from multiple sources and span decades. Source attributions are within the fish point layer and also listed here.
     - Institution collections on GBIF: Mississippi Museum of Natural Science & University of Alabama.
-    - Institution collections that were self hosted: University of Southern Mississippi Ichthyology Collection.
+    - Institution collections that were self hosted: [University of Southern Mississippi Ichthyology Collection] (https://ichthyology.usm.edu/shiny/map/).
     - SEAMAP Bottom Long Line survey data.
     - SEAMAP Groundfish survey data.
     - Research Grade iNaturalist observations.
