@@ -653,7 +653,7 @@ map_data = st_folium(
     height=750,
     width=None,
     key="fish_heatmap_map",
-    debug=True,
+    # debug=True,
     # Only return the object used by the hex-click handler.
     # This avoids sending unused click payloads back to Streamlit.
     returned_objects=[
