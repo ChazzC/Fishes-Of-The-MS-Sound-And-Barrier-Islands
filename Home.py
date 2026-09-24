@@ -34,6 +34,9 @@ st.markdown("""
 
     The environmental data were downloaded from NOAA's [NCEI Gulf Data Atlas](https://www.ncei.noaa.gov/maps/gulf-data-atlas/atlas.htm)
     - [Substrate](https://data.noaa.gov/metaview/page?xml=NOAA/NESDIS/ncei/gulf_atlas/iso/xml/USSeabed_GOM_Sediments.xml&view=getDataView&header=none) 
+    - [Salinity Ranges](https://data.noaa.gov/metaview/page?xml=NOAA/NESDIS/ncei/gulf_atlas/iso/xml/Gulf_Salinity_5_Season.xml&view=getDataView&header=none)
+    - [Submerged Aquatic Vegetation](https://data.noaa.gov/metaview/page?xml=NOAA/NESDIS/ncei/gulf_atlas/iso/xml/USGS_GulfwideSAV_1940_2003.xml&view=getDataView&header=none)
+    - [Elevation](https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.dem:720/html)
     """)
 
 st.info("Click on the left sidebar menu to navigate to the different apps.")
