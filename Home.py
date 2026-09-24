@@ -40,7 +40,7 @@ st.markdown("""
 
     Coastal Ecological Units/Coastal Segment Units were downloaded from [ArcGIS Hub](https://hub.arcgis.com/datasets/esri::ecological-coastal-units-ecus-/about)
 
-    All of the representative fish photos were sourced from iNaturalist users of various Creative Commons Licenses or were from myself. I tried to ensure each photo owner/author is credited according to their photo license as state on iNaturalist. If I've made a mistake please contact me.  
+    All of the representative fish photos were sourced from iNaturalist users of various Creative Commons Licenses or were from myself. I tried to ensure each photo owner/author is credited according to their photo license as stated on iNaturalist. If I've made a mistake please contact me.  
     """)
 
 st.info("Click on the left sidebar menu to navigate to the different apps.")
