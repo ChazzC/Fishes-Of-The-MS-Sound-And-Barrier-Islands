@@ -26,17 +26,21 @@ st.title("Fishes of the Mississippi Sound and Barrier Islands - From Lake Borgne
 st.markdown("""
     This multi-page web app demonstrates an interactive web app created using [streamlit](https://streamlit.io) and open-source mapping libraries,
     such as [leafmap](https://leafmap.org). 
-    The fish records/occurences were compiled from multiple sources and span decades. Source attributions are within the "Individual Fish Records" point layer and also listed here.
+    The fish records/occurences were compiled from multiple sources and span decades. Source attributions are within the "Individual Fish Records" point layer and also listed here:
     - Institution collections on [GBIF](https://www.gbif.org/occurrence/search?occurrenceStatus=present): Mississippi Museum of Natural Science & University of Alabama.
     - Institution collections that were self hosted: [University of Southern Mississippi Ichthyology Collection](https://ichthyology.usm.edu/shiny/map/).
     - [SEAMAP](https://seamapdata.gsmfc.org/pages/download-form.php) Bottom Long Line survey data & Groundfish survey data.
     - Research Grade [iNaturalist](https://www.inaturalist.org/observations) observations.
 
-    The environmental data were downloaded from NOAA's [NCEI Gulf Data Atlas](https://www.ncei.noaa.gov/maps/gulf-data-atlas/atlas.htm)
+    The following environmental data were downloaded from NOAA's [NCEI Gulf Data Atlas](https://www.ncei.noaa.gov/maps/gulf-data-atlas/atlas.htm):
     - [Substrate](https://data.noaa.gov/metaview/page?xml=NOAA/NESDIS/ncei/gulf_atlas/iso/xml/USSeabed_GOM_Sediments.xml&view=getDataView&header=none) 
     - [Salinity Ranges](https://data.noaa.gov/metaview/page?xml=NOAA/NESDIS/ncei/gulf_atlas/iso/xml/Gulf_Salinity_5_Season.xml&view=getDataView&header=none)
     - [Submerged Aquatic Vegetation](https://data.noaa.gov/metaview/page?xml=NOAA/NESDIS/ncei/gulf_atlas/iso/xml/USGS_GulfwideSAV_1940_2003.xml&view=getDataView&header=none)
     - [Elevation](https://www.ncei.noaa.gov/metadata/geoportal/rest/metadata/item/gov.noaa.ngdc.mgg.dem:720/html)
+
+    Coastal Ecological Units/Coastal Segment Units were downloaded from [ArcGIS Hub](https://hub.arcgis.com/datasets/esri::ecological-coastal-units-ecus-/about)
+
+    All of the representative fish photos were sourced from iNaturalist users of various Creative Commons Licenses or were from myself. I tried to ensure each photo owner/author is credited according to their photo license as state on iNaturalist. If I've made a mistake please contact me.  
     """)
 
 st.info("Click on the left sidebar menu to navigate to the different apps.")
