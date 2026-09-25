@@ -14,11 +14,11 @@ import copy
 # ============================================================
 
 st.set_page_config(
-    page_title="Fish Records Heatmap Optimization Testing",
+    page_title="Fishes of the Mississippi Sound and Barrier Islands",
     layout="wide"
 )
 
-st.title("Fish Records Heatmap Optimization Testing")
+st.title("Fishes of the Mississippi Sound and Barrier Islands")
 
 
 # ============================================================
@@ -67,13 +67,13 @@ github_raw_base = (
 # ============================================================
 
 FIELD_ALIASES = {
-    "max_elevation": "Maximum Elevation",
-    "min_elevation": "Minimum Elevation",
+    "max_elevation": "Maximum Elevation (m)",
+    "min_elevation": "Minimum Elevation (m)",
     "dom_condition": "Dominant Substrate",
     "hab_group": "Vegetation",
-    "SAL_HIGH": "Salinity (High Range)",
-    "SAL_LOW": "Salinity (Low Range)",
-    "areaname": "Area Name",
+    "SAL_HIGH": "High Salinity Range (ppt)",
+    "SAL_LOW": "Low Salinity Range (ppt)",
+    # "areaname": "Area Name",
     "CSU_Descriptor": "Coastal Segment Unit Description",
 }
 
