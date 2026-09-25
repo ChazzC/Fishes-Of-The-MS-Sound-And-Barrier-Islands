@@ -567,6 +567,7 @@ m.add_heatmap(
     blur=15,
     min_opacity=0.35,
     max_zoom=12,
+    show=False,
 )
 
 
@@ -596,7 +597,7 @@ folium.GeoJson(
     ),
 
     marker=folium.CircleMarker(
-        radius=1,
+        radius=0.25,
         fill=True,
         fill_opacity=0.8,
         opacity=0.8,
@@ -714,11 +715,11 @@ if matching_hex_ids:
             matching_geojson,
             name="Selected Species",
             style_function=lambda feature: {
-                "color": "red", "weight": 2.5,
+                "color": "black", "weight": 2.5,
                 "fillColor": "yellow", "fillOpacity": 0.35,
             },
             highlight_function=lambda feature: {
-                "color": "red", "weight": 4,
+                "color": "black", "weight": 4,
                 "fillColor": "yellow", "fillOpacity": 0.55,
             },
         ).add_to(m)
