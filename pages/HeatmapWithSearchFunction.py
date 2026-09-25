@@ -567,7 +567,7 @@ m.add_heatmap(
     blur=15,
     min_opacity=0.35,
     max_zoom=12,
-    show=False,
+    
 )
 
 
@@ -716,11 +716,11 @@ if matching_hex_ids:
             name="Selected Species",
             style_function=lambda feature: {
                 "color": "black", "weight": 2.5,
-                "fillColor": "yellow", "fillOpacity": 0.35,
+                "fillColor": "yellow", "fillOpacity": 0.65,
             },
             highlight_function=lambda feature: {
                 "color": "black", "weight": 4,
-                "fillColor": "yellow", "fillOpacity": 0.55,
+                "fillColor": "yellow", "fillOpacity": 0.85,
             },
         ).add_to(m)
 
