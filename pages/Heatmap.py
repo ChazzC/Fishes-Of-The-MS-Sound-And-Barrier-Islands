@@ -471,7 +471,7 @@ study_area_geojson = load_study_area_geojson(study_area_url)
 # ============================================================
 
 m = leafmap.Map(
-    center=[30.9, -88.3],
+    center=[30.2, -88.8],
     zoom=8,
     tiles=None
 )
