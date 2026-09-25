@@ -25,7 +25,7 @@ st.title("Fishes of the Mississippi Sound and Barrier Islands - From Lake Borgne
 
 st.markdown("""
     This multi-page web app demonstrates an interactive web app created using [streamlit](https://streamlit.io) and open-source mapping libraries,
-    such as [leafmap](https://leafmap.org). Data were initially ingested, processed, and cleaned with the open-source desktop GIS software[QGIS](https://qgis.org/)
+    such as [leafmap](https://leafmap.org). Data were initially ingested, processed, and cleaned with the open-source desktop GIS software [QGIS](https://qgis.org/)
     
     There are over 17,000 observations and ~360 species present in this Study Area. The fish records/occurences were compiled from multiple sources and span decades. Efforts were made to update names to current taxonomy. Source attributions are within the "Individual Fish Records" point layer and also listed here:
     - Institution collections on [GBIF](https://www.gbif.org/occurrence/search?occurrenceStatus=present): Mississippi Museum of Natural Science & University of Alabama.
@@ -54,8 +54,8 @@ st.markdown("""
 row1_col1, row1_col2 = st.columns(2)
 with row1_col1:
     st.image("photos/37F0A380-8729-4B91-8E7B-56CF94ECA801.png")
-    st.image("https://github.com/giswqs/data/raw/main/timelapse/las_vegas.gif")
+    st.image("photos/Aerial_Overview.png")
 
-with row1_col2:
-    st.image("https://github.com/giswqs/data/raw/main/timelapse/goes.gif")
-    st.image("https://github.com/giswqs/data/raw/main/timelapse/fire.gif")
+#with row1_col2:
+    #st.image("https://github.com/giswqs/data/raw/main/timelapse/goes.gif")
+    #st.image("https://github.com/giswqs/data/raw/main/timelapse/fire.gif")
