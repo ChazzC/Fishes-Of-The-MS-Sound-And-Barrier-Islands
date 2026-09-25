@@ -44,18 +44,18 @@ st.markdown("""
     All of the representative fish photos were sourced from iNaturalist users of various Creative Commons Licenses or were from myself. I tried to ensure each photo owner/author is credited according to their photo license as stated on iNaturalist. If I've made a mistake please contact me.  
     """)
 
-st.info("Click on the left sidebar menu to navigate to the different apps.")
+st.info("Click on the left sidebar menu to navigate to the app.")
 
-st.subheader("Timelapse of Satellite Imagery")
-st.markdown("""
-    The following timelapse animations were created using the Timelapse web app. Click `Timelapse` on the left sidebar menu to create your own timelapse for any location around the globe.
-""")
+# st.subheader("Timelapse of Satellite Imagery")
+# st.markdown("""
+#     The following timelapse animations were created using the Timelapse web app. Click `Timelapse` on the left sidebar menu to create your own timelapse for any location around the globe.
+# """)
 
-row1_col1, row1_col2 = st.columns(2)
-with row1_col1:
-    st.image("photos/Nautical_Chart.png")
-    #st.image("photos/Aerial_Overview.png")
+# row1_col1, row1_col2 = st.columns(2)
+# with row1_col1:
+#     st.image("photos/Nautical_Chart.png")
+#     #st.image("photos/Aerial_Overview.png")
 
-with row1_col2:
-    st.image("photos/Aerial_Overview.png")
-    #st.image("https://github.com/giswqs/data/raw/main/timelapse/fire.gif")
+# with row1_col2:
+#     st.image("photos/Aerial_Overview.png")
+#     #st.image("https://github.com/giswqs/data/raw/main/timelapse/fire.gif")
