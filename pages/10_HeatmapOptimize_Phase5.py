@@ -67,8 +67,8 @@ github_raw_base = (
 # ============================================================
 
 FIELD_ALIASES = {
-    "max_elevation": "Maximum Elevation",
-    "min_elevation": "Minimum Elevation",
+    "max_elevation": "Maximum Elevation (m)",
+    "min_elevation": "Minimum Elevation (m)",
     "dom_condition": "Dominant Substrate",
     "hab_group": "Vegetation",
     "SAL_HIGH": "Salinity (High Range)",
