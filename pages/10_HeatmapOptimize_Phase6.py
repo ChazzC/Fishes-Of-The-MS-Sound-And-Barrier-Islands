@@ -2,11 +2,17 @@ import streamlit as st
 import leafmap.foliumap as leafmap
 import geopandas as gpd
 import folium
-from streamlit_folium import st_folium
+from streamlit_folium import (
+    _component_func,
+    generate_js_hash,
+    _get_html,
+    _get_header,
+    _get_map_string,
+    get_full_id,
+)
 import requests
 import json
 import ast
-import copy
 
 
 # ============================================================
@@ -404,21 +410,50 @@ study_area_geojson = load_study_area_geojson(study_area_url)
 
 
 # ============================================================
-# PHASE 5B: CACHE THE COMPLETE MAP RESOURCE
+# HEATMAP CLICK BEHAVIOR
 # ============================================================
 
-@st.cache_resource
-def build_map():
-    fish_geojson = load_fish_geojson(fish_records_url)
-    study_area_geojson = load_study_area_geojson(study_area_url)
-    hex_geojson = load_hex_map_geojson(hex_bins_url)
-    heatmap_points = load_heatmap_points(fish_records_url)
+# Make the fish heatmap visual-only so it cannot intercept clicks.
+st.markdown(
+    '''
+    <style>
+    .leaflet-heatmap-layer {
+        pointer-events: none !important;
+    }
+    </style>
+    ''',
+    unsafe_allow_html=True,
+)
 
-    m = leafmap.Map(
+
+# ============================================================
+# PHASE 6A: CACHE THE ENTIRE FOLIUM MAP RENDER
+# ============================================================
+#
+# The map itself is static.  Only the Streamlit selection panel
+# changes when a hex is clicked.  st_folium() normally rebuilds
+# the Folium HTML/Leaflet JavaScript on every Streamlit rerun.
+# With 5,833 hexagons, that is expensive.
+#
+# Phase 6A renders the static map ONCE and caches the resulting
+# component payload.  Subsequent reruns reuse the exact same
+# Leaflet script instead of walking all 5,833 hexagons again.
+#
+# This uses the rendering primitives from streamlit-folium rather
+# than changing the visual map or the click-handling logic.
+# ============================================================
+
+@st.cache_data(show_spinner=False)
+def build_cached_map_payload():
+    """Build and render the static Folium map exactly once."""
+
+    # Reuse the already-defined map object from the current script
+    # construction.  This function intentionally builds its own map
+    # so the cached payload is independent of later Streamlit state.
+    cached_map = leafmap.Map(
         center=[30.9, -88.3],
         zoom=8,
         tiles=None,
-        prefer_canvas=True,
     )
 
     folium.TileLayer(
@@ -432,7 +467,7 @@ def build_map():
         overlay=False,
         control=True,
         show=True,
-    ).add_to(m)
+    ).add_to(cached_map)
 
     folium.TileLayer(
         tiles="OpenStreetMap",
@@ -440,9 +475,9 @@ def build_map():
         overlay=False,
         control=True,
         show=False,
-    ).add_to(m)
+    ).add_to(cached_map)
 
-    titiler_tiles = (
+    cached_titiler_tiles = (
         "https://titiler.opengeos.org/cog/tiles/"
         "WebMercatorQuad/{z}/{x}/{y}.png"
         "?url=" + dem_filepath
@@ -452,17 +487,19 @@ def build_map():
     )
 
     folium.TileLayer(
-        tiles=titiler_tiles,
+        tiles=cached_titiler_tiles,
         attr="TiTiler",
         name="Elevation & Bathymetry",
         overlay=True,
         control=True,
         show=False,
         opacity=0.75,
-    ).add_to(m)
+    ).add_to(cached_map)
 
-    m.add_heatmap(
-        heatmap_points,
+    cached_heatmap_points = load_heatmap_points(fish_records_url)
+
+    cached_map.add_heatmap(
+        cached_heatmap_points,
         name="Fish Observation Density",
         radius=20,
         blur=15,
@@ -470,20 +507,20 @@ def build_map():
         max_zoom=12,
     )
 
-    fish_group = folium.FeatureGroup(
+    cached_fish_group = folium.FeatureGroup(
         name="Individual Fish Records",
         show=False,
     )
 
-    fish_fields = [
+    cached_fish_fields = [
         field for field in fish_gdf.columns if field != "geometry"
     ]
 
     folium.GeoJson(
         fish_geojson,
         tooltip=folium.GeoJsonTooltip(
-            fields=fish_fields,
-            aliases=fish_fields,
+            fields=cached_fish_fields,
+            aliases=cached_fish_fields,
             localize=True,
             sticky=False,
         ),
@@ -493,10 +530,11 @@ def build_map():
             fill_opacity=0.8,
             opacity=0.8,
         ),
-    ).add_to(fish_group)
-    fish_group.add_to(m)
+    ).add_to(cached_fish_group)
 
-    study_group = folium.FeatureGroup(
+    cached_fish_group.add_to(cached_map)
+
+    cached_study_group = folium.FeatureGroup(
         name="Study Area",
         show=True,
     )
@@ -510,16 +548,18 @@ def build_map():
             "fillOpacity": 0.0,
         },
         interactive=False,
-    ).add_to(study_group)
-    study_group.add_to(m)
+    ).add_to(cached_study_group)
 
-    hex_group = folium.FeatureGroup(
+    cached_study_group.add_to(cached_map)
+
+    cached_hex_geojson = load_hex_map_geojson(hex_bins_url)
+    cached_hex_group = folium.FeatureGroup(
         name="Hex Bins",
         show=True,
     )
 
     folium.GeoJson(
-        hex_geojson,
+        cached_hex_geojson,
         style_function=lambda feature: {
             "color": "white",
             "weight": 0.15,
@@ -532,150 +572,413 @@ def build_map():
             "fillColor": "yellow",
             "fillOpacity": 0.15,
         },
-    ).add_to(hex_group)
-    hex_group.add_to(m)
+    ).add_to(cached_hex_group)
+
+    cached_hex_group.add_to(cached_map)
 
     folium.LayerControl(
         position="topright",
         collapsed=False,
-    ).add_to(m)
+    ).add_to(cached_map)
 
-    return m
+    # Render the map once, then extract the same payload that
+    # st_folium would normally generate on every rerun.
+    cached_map.get_root().render()
+    cached_map.render()
 
+    html = _get_html(cached_map)
+    header = _get_header(cached_map)
+    leaflet = _get_map_string(cached_map)
 
-st.markdown(
-    '''
-    <style>
-    .leaflet-heatmap-layer {
-        pointer-events: none !important;
+    m_id = get_full_id(cached_map)
+
+    # st_folium's frontend expects the JavaScript/CSS dependency
+    # lists that Folium elements declare.  Recreate that small part
+    # of st_folium's renderer here.
+    import branca
+
+    css_links = []
+    js_links = []
+
+    def walk(fig):
+        if isinstance(fig, branca.colormap.ColorMap):
+            yield fig
+        if isinstance(fig, folium.plugins.DualMap):
+            yield from walk(fig.m1)
+            yield from walk(fig.m2)
+        if isinstance(fig, folium.elements.JSCSSMixin):
+            yield fig
+        if hasattr(fig, "_children"):
+            for child in fig._children.values():
+                yield from walk(child)
+
+    for elem in walk(cached_map):
+        if isinstance(elem, branca.colormap.ColorMap):
+            js_links.insert(
+                0,
+                "https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js",
+            )
+            js_links.insert(0, "https://d3js.org/d3.v4.min.js")
+        css_links.extend([href for _, href in getattr(elem, "default_css", [])])
+        js_links.extend([src for _, src in getattr(elem, "default_js", [])])
+
+    css_links = list(dict.fromkeys(css_links))
+    js_links = list(dict.fromkeys(js_links))
+
+    # This must remain stable across reruns or Streamlit may remount
+    # the component.  The Leaflet script itself is cached, so the hash
+    # is also stable.
+    component_key = generate_js_hash(
+        leaflet,
+        "fish_heatmap_map",
+        False,
+    )
+
+    return {
+        "script": leaflet,
+        "header": header,
+        "html": html,
+        "id": m_id,
+        "css_links": css_links,
+        "js_links": js_links,
+        "component_key": component_key,
     }
-    </style>
-    ''',
-    unsafe_allow_html=True,
+
+
+# Build/read the cached static map payload.
+map_payload = build_cached_map_payload()
+
+
+# ============================================================
+# DISPLAY CACHED MAP AND CAPTURE CLICKS
+# ============================================================
+
+# We call the underlying Streamlit component directly so the
+# already-rendered Leaflet payload can be reused without calling
+# st_folium()'s Folium rendering pipeline again.
+map_data = _component_func(
+    script=map_payload["script"],
+    header=map_payload["header"],
+    html=map_payload["html"],
+    id=map_payload["id"],
+    key=map_payload["component_key"],
+    height=750,
+    width=None,
+    returned_objects=["last_active_drawing"],
+    default={
+        "last_active_drawing": None,
+    },
+    zoom=None,
+    center=None,
+    feature_group=None,
+    return_on_hover=False,
+    layer_control=None,
+    pixelated=False,
+    css_links=map_payload["css_links"],
+    js_links=map_payload["js_links"],
+    on_change=None,
+    wrap_longitude=False,
 )
 
 
-@st.fragment(key="heatmap_selection")
-def heatmap_selection():
-    m = build_map()
-    hex_lookup = load_hex_lookup(hex_bins_url)
+# ============================================================
+# DISPLAY MAP AND CAPTURE CLICKS
+#
+# IMPORTANT:
+# Do not add another LayerControl through st_folium().
+# ============================================================
 
-    map_data = st_folium(
-        m,
-        height=750,
-        width=None,
-        key="heatmap_folium_map",
-        returned_objects=["last_active_drawing"],
+map_data = st_folium(
+    m,
+    height=750,
+    width=None,
+    key="fish_heatmap_map",
+    # Only return the object used by the hex-click handler.
+    # This avoids sending unused click payloads back to Streamlit.
+    returned_objects=[
+        "last_active_drawing",
+    ],
+)
+
+
+# ============================================================
+# PROCESS CLICKED HEXAGON
+# ============================================================
+
+active = None
+
+if map_data:
+    active = map_data.get("last_active_drawing")
+
+
+if active:
+
+    properties = active.get(
+        "properties",
+        {}
     )
 
-    active = map_data.get("last_active_drawing") if map_data else None
+    if properties.get("_layer_type") == "hex":
 
-    if active:
-        properties = active.get("properties", {})
+        # Identify the hexagon.
+        active_hex_id = properties.get("id")
 
-        if properties.get("_layer_type") == "hex":
-            active_hex_id = properties.get("id")
-            current_hex_id = None
+        current_hex_id = None
 
-            if st.session_state.selected_hex:
-                current_hex_id = st.session_state.selected_hex.get("id")
+        if st.session_state.selected_hex:
+            current_hex_id = (
+                st.session_state.selected_hex.get("id")
+            )
 
-            if active_hex_id != current_hex_id:
-                selected_row = hex_lookup.get(str(active_hex_id))
+        # Only reset the species selection if the user
+        # actually selected a DIFFERENT hexagon.
+        #
+        # This is important because clicking a Streamlit
+        # species button causes the page to rerun.
+        if active_hex_id != current_hex_id:
 
-                if selected_row is not None:
-                    st.session_state.selected_hex = selected_row
-                    st.session_state.selected_species = None
+            # Retrieve the complete record from the Python-side
+            # lookup instead of relying on browser-side attributes.
+            selected_row = hex_lookup.get(str(active_hex_id))
 
-    selected_hex = st.session_state.selected_hex
+            if selected_row is not None:
 
-    if not selected_hex:
-        st.info(
-            "Click a hexagon to view its environmental data and fish species."
-        )
-        return
+                st.session_state.selected_hex = selected_row
 
-    species = parse_species_array(selected_hex.get("Species_Array"))
+                st.session_state.selected_species = None
+
+
+# ============================================================
+# GET CURRENT SELECTED HEX
+# ============================================================
+
+selected_hex = st.session_state.selected_hex
+
+
+# ============================================================
+# DISPLAY SELECTED HEX INFORMATION
+# ============================================================
+
+if selected_hex:
+
+    species = parse_species_array(
+        selected_hex.get("Species_Array")
+    )
 
     st.divider()
-    left, right = st.columns([1, 1.4])
+
+    left, right = st.columns(
+        [1, 1.4]
+    )
+
+
+    # ========================================================
+    # LEFT COLUMN
+    # ========================================================
 
     with left:
-        st.subheader("Selected Hexagon")
+
+        st.subheader(
+            "Selected Hexagon"
+        )
+
+
+        # ----------------------------------------------------
+        # Environmental information
+        # ----------------------------------------------------
 
         for field, label in FIELD_ALIASES.items():
+
             value = selected_hex.get(field)
 
             if value is not None:
+
                 value_text = str(value).strip()
 
-                if value_text not in {"", "nan", "None"}:
-                    st.markdown(f"**{label}:** {value}")
+                if value_text not in {
+                    "",
+                    "nan",
+                    "None",
+                }:
 
-        st.subheader(f"Fish Species ({len(species)})")
+                    st.markdown(
+                        f"**{label}:** {value}"
+                    )
+
+
+        # ----------------------------------------------------
+        # Species list
+        # ----------------------------------------------------
+
+        st.subheader(
+            f"Fish Species ({len(species)})"
+        )
+
 
         if species:
-            for sp in species:
-                display_name = species_display_name(sp)
 
+            for sp in species:
+        
+                display_name = species_display_name(sp)
+        
                 if st.button(
                     display_name,
                     key=f"species_{sp}",
                     use_container_width=True,
                 ):
+
+                    # Keep the scientific name as the internal value.
                     st.session_state.selected_species = sp
 
+
+    # ========================================================
+    # RIGHT COLUMN
+    # ========================================================
+
     with right:
-        selected_species = st.session_state.selected_species
+
+        selected_species = (
+            st.session_state.selected_species
+        )
+
+
+        # ----------------------------------------------------
+        # Species selected
+        # ----------------------------------------------------
 
         if selected_species:
-            record = find_species_metadata(selected_species)
-            st.subheader(selected_species)
+
+            record = find_species_metadata(
+                selected_species
+            )
+
+            st.subheader(
+                selected_species
+            )
+
+
+            # ------------------------------------------------
+            # Photo and metadata
+            # ------------------------------------------------
 
             if record:
-                image_url = species_photo_url(record)
+
+                image_url = species_photo_url(
+                    record
+                )
+
+
+                # --------------------------------------------
+                # Photo
+                # --------------------------------------------
 
                 if image_url:
+
                     try:
+
                         image_bytes = load_species_photo(image_url)
 
                         if image_bytes:
                             st.image(
                                 image_bytes,
-                                use_container_width=True,
+                                use_container_width=True
                             )
                         else:
-                            st.info("No photo is available for this species.")
+                            st.info(
+                                "No photo is available "
+                                "for this species."
+                            )
+
                     except Exception as e:
+
                         st.warning(
-                            "The species photo could not be loaded: "
-                            f"{e}"
+                            "The species photo could "
+                            f"not be loaded: {e}"
                         )
+
+
                 else:
-                    st.info("No photo is available for this species.")
 
-                if record.get("attribution"):
-                    st.caption(record["attribution"])
-
-                if record.get("license"):
-                    st.write(f"**License:** {record['license']}")
-
-                if record.get("author"):
-                    st.write(
-                        f"**Photographer / Author:** {record['author']}"
+                    st.info(
+                        "No photo is available "
+                        "for this species."
                     )
 
+
+                # --------------------------------------------
+                # Attribution
+                # --------------------------------------------
+
+                if record.get("attribution"):
+
+                    st.caption(
+                        record["attribution"]
+                    )
+
+
+                # --------------------------------------------
+                # License
+                # --------------------------------------------
+
+                if record.get("license"):
+
+                    st.write(
+                        f"**License:** "
+                        f"{record['license']}"
+                    )
+
+
+                # --------------------------------------------
+                # Photographer / Author
+                # --------------------------------------------
+
+                if record.get("author"):
+
+                    st.write(
+                        f"**Photographer / Author:** "
+                        f"{record['author']}"
+                    )
+
+
+                # --------------------------------------------
+                # iNaturalist source
+                # --------------------------------------------
+
                 if record.get("source_url"):
+
                     st.markdown(
                         "[View source on iNaturalist]"
                         f"({record['source_url']})"
                     )
+
+
             else:
-                st.info("No photo metadata was found for this species.")
+
+                st.info(
+                    "No photo metadata was found "
+                    "for this species."
+                )
+
+
+        # ----------------------------------------------------
+        # No species selected yet
+        # ----------------------------------------------------
+
         else:
+
             st.info(
-                "Click a species name to view its photo and attribution."
+                "Click a species name to view "
+                "its photo and attribution."
             )
 
 
-heatmap_selection()
+# ============================================================
+# NOTHING SELECTED YET
+# ============================================================
+
+else:
+
+    st.info(
+        "Click a hexagon to view its "
+        "environmental data and fish species."
+    )
